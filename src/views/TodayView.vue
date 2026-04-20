@@ -45,6 +45,15 @@ const canFinish = computed(() =>
   !sessionComplete.value && !!workoutStore.currentSession
 )
 
+const setsProgress = computed(() => {
+  const allExercises = [...rehabExercises.value, ...mainExercises.value]
+  const total = allExercises.reduce((sum, ex) => sum + ex.sets_target, 0)
+  const done  = allExercises.reduce((sum, ex) =>
+    sum + Array.from({ length: ex.sets_target }, (_, i) => i + 1)
+          .filter(s => workoutStore.isSetLogged(ex.id, s)).length, 0)
+  return { done, total }
+})
+
 onMounted(async () => {
   await programStore.fetchActiveProgram()
   if (programStore.todayProgramDay && !isRestDay.value) {
@@ -223,8 +232,11 @@ const streakWarning = computed(() => userStore.streak >= WARNING_STREAK)
         :disabled="!canFinish"
         @click="finishSession"
       >
-        TERMINER LA SÉANCE
-        <span class="xp-preview">+{{ programStore.todayProgramDay?.xp_reward ?? 0 }} XP</span>
+        TERMINER
+        <span class="xp-preview">
+          {{ setsProgress.done }}/{{ setsProgress.total }} séries
+          · +{{ programStore.todayProgramDay?.xp_reward ?? 0 }} XP
+        </span>
       </button>
     </div>
 
