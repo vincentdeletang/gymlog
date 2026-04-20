@@ -46,12 +46,12 @@ insert into exercises (program_day_id, name, order_index, sets_target, reps_targ
 
 -- MAIN
 insert into exercises (program_day_id, name, order_index, sets_target, reps_target, is_bodyweight, notes, section) values
-  (d_lundi, 'Rowing barre (barres de sécurité)', 5, 4, '8-10',   false, 'Barres à hauteur mi-tibia ou genoux, dos parallèle au sol, tirer vers le nombril, coudes proches du corps', 'main'),
-  (d_lundi, 'Rowing haltère unilatéral',          6, 3, '12',     false, 'Appui genou + main sur le banc, dos neutre, amplitude complète, squeeze en haut',                           'main'),
-  (d_lundi, 'Curl barre EZ (supination)',          7, 4, '10-12',  false, 'Coudes fixes le long du corps, pas de balancement, descente contrôlée',                                    'main'),
-  (d_lundi, 'Curl haltères hammer',                8, 3, '10-12',  false, 'Prise neutre, mouvement lent, squeeze en haut — travaille le brachial et l''avant-bras',                  'main'),
-  (d_lundi, 'Curl haltère concentré',              9, 2, '12-15',  false, 'Coude calé sur intérieur de cuisse, contraction max en haut, 2s de hold — connexion neuromusculaire',     'main'),
-  (d_lundi, 'Plank',                              10, 3, '30-60s', true,  null,                                                                                                        'main'),
+  (d_lundi, 'Plank',                               5, 3, '30-60s', true,  null,                                                                                                        'main'),
+  (d_lundi, 'Rowing barre (barres de sécurité)',   6, 4, '8-10',   false, 'Barres à hauteur mi-tibia ou genoux, dos parallèle au sol, tirer vers le nombril, coudes proches du corps', 'main'),
+  (d_lundi, 'Rowing haltère unilatéral',           7, 3, '12',     false, 'Appui genou + main sur le banc, dos neutre, amplitude complète, squeeze en haut',                           'main'),
+  (d_lundi, 'Curl barre EZ (supination)',          8, 4, '10-12',  false, 'Coudes fixes le long du corps, pas de balancement, descente contrôlée',                                    'main'),
+  (d_lundi, 'Curl haltères hammer',                9, 3, '10-12',  false, 'Prise neutre, mouvement lent, squeeze en haut — travaille le brachial et l''avant-bras',                  'main'),
+  (d_lundi, 'Curl haltère concentré',             10, 2, '12-15',  false, 'Coude calé sur intérieur de cuisse, contraction max en haut, 2s de hold — connexion neuromusculaire',     'main'),
   (d_lundi, 'Suspension barre fixe',              11, 2, '30s',    true,  'Décompression vertébrale, relâchement complet, genoux pliés si besoin',                                   'cooldown');
 
 -- CARDIO FIN
@@ -70,9 +70,9 @@ insert into cardio_blocks (program_day_id, name, duration_minutes, order_index, 
 -- ============================================================
 insert into exercises (program_day_id, name, order_index, sets_target, reps_target, is_bodyweight, notes, section) values
   (d_mercredi, 'Dead bug',                                  0, 2, '8/côté',   true,  'Activation lombaires avant le travail lourd — allonger bras et jambe opposés en expirant, lombaires plaquées au sol, retour lent', 'main'),
-  (d_mercredi, 'Fentes marchées haltères',                  1, 4, '10/jambe', false, 'Pas suffisamment large pour que le genou avant ne dépasse pas le pied, descente selon confort', 'main'),
-  (d_mercredi, 'Soulevé de terre jambes tendues (barre)',   2, 3, '10-12',    false, 'Dos plat, descente contrôlée le long des jambes, étirement ischio en bas',                      'main'),
-  (d_mercredi, 'Mollets debout (barre)',                    3, 4, '15-20',    false, 'Monter sur disque pour amplitude',                                                               'main'),
+  (d_mercredi, 'Goblet squat',                              1, 3, '8',        false, 'Haltère tenu vertical devant la poitrine, descente profonde, genoux dans l''axe des pieds, torse vertical — charge axiale pour la densité osseuse', 'main'),
+  (d_mercredi, 'Fentes marchées haltères',                  2, 3, '10/jambe', false, 'Pas suffisamment large pour que le genou avant ne dépasse pas le pied, descente selon confort', 'main'),
+  (d_mercredi, 'Soulevé de terre jambes tendues (barre)',   3, 3, '10-12',    false, 'Dos plat, descente contrôlée le long des jambes, étirement ischio en bas',                      'main'),
   (d_mercredi, 'Suspension barre fixe',                     4, 2, '30s',      true,  'Décompression vertébrale, relâchement complet, genoux pliés si besoin',                       'cooldown');
 
 insert into cardio_blocks (program_day_id, name, duration_minutes, order_index, notes) values
@@ -101,7 +101,7 @@ insert into exercises (program_day_id, name, order_index, sets_target, reps_targ
   (d_vendredi, 'Développé haltères neutre (incliné 30°)', 5, 4, '10-12', false, 'Prise neutre = safe épaule',                       'main'),
   (d_vendredi, 'Élévations latérales haltères',           6, 3, '12-15', false, 'Jamais au-dessus de l''horizontale',               'main'),
   (d_vendredi, 'Extensions triceps barre EZ',             7, 4, '10-12', false, 'Coudes fixes pointés plafond',                     'main'),
-  (d_vendredi, 'Kickbacks haltères',                      8, 4, '12-15', false, 'Finisher triceps, serrer en extension',            'main'),
+  (d_vendredi, 'Kickbacks haltères',                      8, 3, '12-15', false, 'Finisher triceps, serrer en extension',            'main'),
   (d_vendredi, 'Dead bug',                                 9, 3, '10/côté', true, 'Allongé sur le dos, allonger bras et jambe opposés en expirant, lombaires plaquées au sol, retour lent — gainage profond, protège les lombaires', 'main'),
   (d_vendredi, 'Suspension barre fixe',                  10, 2, '30s',    true,  'Décompression vertébrale, relâchement complet, genoux pliés si besoin', 'cooldown');
 

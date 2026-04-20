@@ -24,7 +24,7 @@ BEGIN
   UPDATE exercises SET bar_id = bar_droite
   WHERE name ILIKE '%barre%' AND name NOT ILIKE '%EZ%' AND NOT is_bodyweight;
 
-  -- Dumbbells: all exercises containing "haltère" / "haltères"
+  -- Dumbbells: all exercises containing "haltère" / "haltères" + goblet squat
   UPDATE exercises SET bar_id = bar_haltere
-  WHERE (name ILIKE '%haltère%' OR name ILIKE '%haltères%') AND NOT is_bodyweight;
+  WHERE (name ILIKE '%haltère%' OR name ILIKE '%haltères%' OR name = 'Goblet squat') AND NOT is_bodyweight;
 END $$;
