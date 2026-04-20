@@ -4,8 +4,9 @@ import { ref, computed, watch } from 'vue'
 const props = defineProps({
   exercise: Object,
   setNumber: Number,
-  existingLog: Object,
-  previousLog: Object,
+  existingLog: Object,   // this specific set already logged (edit mode)
+  sessionPrevSet: Object, // set N-1 of same exercise in current session (pre-fill)
+  previousLog: Object,   // last session hint (display only)
 })
 
 const emit = defineEmits(['close', 'save'])
@@ -22,11 +23,17 @@ const RIR_OPTIONS = [
   { value: 4, label: '4+', sub: 'Léger',   color: '#6b7280' },
 ]
 
-watch(() => props.existingLog, (log) => {
+watch([() => props.existingLog, () => props.sessionPrevSet], ([log, prev]) => {
   if (log) {
+    // Editing an already-logged set → load its values
     weightKg.value = log.weight_kg ?? ''
     repsDone.value = log.reps_done ?? ''
     rir.value = log.rir ?? 2
+  } else if (prev) {
+    // New set → pre-fill from previous set of this exercise in current session
+    weightKg.value = prev.weight_kg ?? ''
+    repsDone.value = prev.reps_done ?? ''
+    rir.value = prev.rir ?? 2
   } else {
     weightKg.value = ''
     repsDone.value = ''

@@ -1,14 +1,23 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 
 const props = defineProps({
   setNumber: Number,
-  logged: Boolean,
-  ripple: { type: Boolean, default: false },
+  log: Object,       // full set_log object or null
+  isBodyweight: Boolean,
 })
 
 const emit = defineEmits(['click'])
 const animating = ref(false)
+
+const logged = computed(() => !!props.log)
+
+const label = computed(() => {
+  if (!props.log) return null
+  if (props.isBodyweight) return props.log.reps_done ? `${props.log.reps_done}r` : '✓'
+  if (props.log.weight_kg) return `${props.log.weight_kg}kg`
+  return props.log.reps_done ? `${props.log.reps_done}r` : '✓'
+})
 
 function handleClick() {
   animating.value = true
@@ -25,14 +34,14 @@ function handleClick() {
     :aria-label="`Série ${setNumber}`"
   >
     <span class="set-num">S{{ setNumber }}</span>
-    <span v-if="logged" class="check">✓</span>
+    <span v-if="label" class="set-info">{{ label }}</span>
   </button>
 </template>
 
 <style scoped>
 .set-btn {
-  min-width: 48px;
-  min-height: 48px;
+  min-width: 52px;
+  min-height: 52px;
   border-radius: 10px;
   border: 2px solid #1f2937;
   background: #111827;
@@ -57,14 +66,17 @@ function handleClick() {
 
 .set-num {
   font-family: 'Barlow Condensed', sans-serif;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 700;
   line-height: 1;
 }
 
-.check {
-  font-size: 11px;
+.set-info {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 12px;
+  font-weight: 700;
   line-height: 1;
+  white-space: nowrap;
 }
 
 .set-btn.animating {

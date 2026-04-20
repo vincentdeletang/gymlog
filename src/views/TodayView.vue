@@ -77,6 +77,18 @@ async function openSetModal({ exercise, setNumber }) {
   modalOpen.value = true
 }
 
+// Pre-fill from the most recent logged set of same exercise in current session
+const modalSessionPrevSet = computed(() => {
+  if (!modalExercise.value || !modalSetNumber.value) return null
+  // Look for set N-1, or if that's not logged yet, find the last logged set
+  const exId = modalExercise.value.id
+  for (let s = modalSetNumber.value - 1; s >= 1; s--) {
+    const log = workoutStore.getSetLog(exId, s)
+    if (log) return log
+  }
+  return null
+})
+
 async function saveSet({ weightKg, repsDone, rir }) {
   await workoutStore.logSet({
     exerciseId: modalExercise.value.id,
@@ -234,6 +246,7 @@ const streakWarning = computed(() => userStore.streak >= WARNING_STREAK)
       :exercise="modalExercise"
       :set-number="modalSetNumber"
       :existing-log="workoutStore.getSetLog(modalExercise?.id, modalSetNumber)"
+      :session-prev-set="modalSessionPrevSet"
       :previous-log="workoutStore.getPreviousSet(modalExercise?.id, modalSetNumber)"
       @close="modalOpen = false"
       @save="saveSet"

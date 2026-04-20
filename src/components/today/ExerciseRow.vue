@@ -49,7 +49,8 @@ const SECTION_BADGE = {
         v-for="s in sets"
         :key="s"
         :set-number="s"
-        :logged="workoutStore.isSetLogged(exercise.id, s)"
+        :log="workoutStore.getSetLog(exercise.id, s)"
+        :is-bodyweight="exercise.is_bodyweight"
         @click="emit('openSet', { exercise, setNumber: s })"
       />
     </div>
