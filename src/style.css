@@ -1,0 +1,84 @@
+@import "tailwindcss";
+
+:root {
+  --bg: #0a0e17;
+  --surface: #111827;
+  --surface2: #1f2937;
+  --blue: #3b82f6;
+  --green: #10b981;
+  --orange: #f59e0b;
+  --red: #ef4444;
+  --purple: #8b5cf6;
+  --text: #f9fafb;
+  --text-muted: #9ca3af;
+  --border: #1f2937;
+}
+
+* {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html, body {
+  background-color: var(--bg);
+  color: var(--text);
+  font-family: 'Barlow', sans-serif;
+  font-size: 16px;
+  min-height: 100vh;
+  overscroll-behavior: none;
+  margin: 0;
+}
+
+h1, h2, h3, .font-display {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-weight: 700;
+}
+
+#app {
+  padding-bottom: env(safe-area-inset-bottom);
+  padding-top: env(safe-area-inset-top);
+}
+
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+button, [role="button"] {
+  touch-action: manipulation;
+  user-select: none;
+}
+
+.sheet-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.6);
+  z-index: 40;
+  backdrop-filter: blur(2px);
+}
+
+.sheet-panel {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: var(--surface);
+  border-radius: 20px 20px 0 0;
+  z-index: 50;
+  padding: 0 1rem 2rem;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.slide-up-enter-active,
+.slide-up-leave-active {
+  transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+}
+.slide-up-enter-from,
+.slide-up-leave-to {
+  transform: translateY(100%);
+}
+
+.fade-enter-active,
+.fade-leave-active { transition: opacity 0.2s; }
+.fade-enter-from,
+.fade-leave-to { opacity: 0; }
