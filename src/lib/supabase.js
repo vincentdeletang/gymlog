@@ -9,6 +9,6 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     storageKey: 'gymlog-auth',
     storage: localStorage,
     autoRefreshToken: true,
-    detectSessionInUrl: true,
+    detectSessionInUrl: false, // handled manually in App.vue (hash router conflict)
   },
 })
