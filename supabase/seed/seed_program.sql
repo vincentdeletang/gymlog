@@ -69,6 +69,7 @@ insert into cardio_blocks (program_day_id, name, duration_minutes, order_index, 
 -- MERCREDI — Lower Body
 -- ============================================================
 insert into exercises (program_day_id, name, order_index, sets_target, reps_target, is_bodyweight, notes, section) values
+  (d_mercredi, 'Dead bug',                                  0, 2, '8/côté',   true,  'Activation lombaires avant le travail lourd — allonger bras et jambe opposés en expirant, lombaires plaquées au sol, retour lent', 'main'),
   (d_mercredi, 'Fentes marchées haltères',                  1, 4, '10/jambe', false, 'Pas suffisamment large pour que le genou avant ne dépasse pas le pied, descente selon confort', 'main'),
   (d_mercredi, 'Soulevé de terre jambes tendues (barre)',   2, 3, '10-12',    false, 'Dos plat, descente contrôlée le long des jambes, étirement ischio en bas',                      'main'),
   (d_mercredi, 'Mollets debout (barre)',                    3, 4, '15-20',    false, 'Monter sur disque pour amplitude',                                                               'main'),
