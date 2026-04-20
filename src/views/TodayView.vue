@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import LevelBar from '@/components/shared/LevelBar.vue'
 import ExerciseRow from '@/components/today/ExerciseRow.vue'
 import SetLogModal from '@/components/today/SetLogModal.vue'
@@ -113,6 +113,25 @@ async function finishSession() {
 
 const WARNING_STREAK = 7
 const streakWarning = computed(() => userStore.streak >= WARNING_STREAK)
+
+// Accordion state
+const open = ref({ rehab: true, main: true, cardio: true })
+function toggle(section) { open.value[section] = !open.value[section] }
+
+function isSectionDone(exercises) {
+  if (!exercises.length) return false
+  return exercises.every(ex =>
+    Array.from({ length: ex.sets_target }, (_, i) => i + 1)
+      .every(s => workoutStore.isSetLogged(ex.id, s))
+  )
+}
+
+const rehabDone  = computed(() => isSectionDone(rehabExercises.value))
+const mainDone   = computed(() => isSectionDone(mainExercises.value))
+
+// Auto-collapse when section is fully done
+watch(rehabDone, done => { if (done) open.value.rehab = false })
+watch(mainDone,  done => { if (done) open.value.main  = false })
 </script>
 
 <template>
@@ -159,59 +178,82 @@ const streakWarning = computed(() => userStore.streak >= WARNING_STREAK)
 
     <!-- Strength day -->
     <div v-else-if="isStrength" class="session-content">
+
       <!-- REHAB section -->
       <div v-if="rehabExercises.length" class="section">
-        <div class="section-header">
-          <span class="section-label rehab">🔧 REHAB</span>
-          <span class="section-sub">Avant séance</span>
+        <button class="section-header" @click="toggle('rehab')">
+          <div class="section-left">
+            <span class="section-label rehab">🔧 REHAB</span>
+            <span class="section-sub">Avant séance</span>
+            <span v-if="rehabDone" class="section-check">✓</span>
+          </div>
+          <span class="section-chevron" :class="{ open: open.rehab }">›</span>
+        </button>
+        <div v-show="open.rehab" class="section-body">
+          <ExerciseRow
+            v-for="ex in rehabExercises"
+            :key="ex.id"
+            :exercise="ex"
+            @openSet="openSetModal"
+          />
         </div>
-        <ExerciseRow
-          v-for="ex in rehabExercises"
-          :key="ex.id"
-          :exercise="ex"
-          @openSet="openSetModal"
-        />
       </div>
 
       <!-- MAIN section -->
       <div v-if="mainExercises.length" class="section">
-        <div class="section-header">
-          <span class="section-label main">⚡ MAIN</span>
+        <button class="section-header" @click="toggle('main')">
+          <div class="section-left">
+            <span class="section-label main">⚡ MAIN</span>
+            <span v-if="mainDone" class="section-check">✓</span>
+          </div>
+          <span class="section-chevron" :class="{ open: open.main }">›</span>
+        </button>
+        <div v-show="open.main" class="section-body">
+          <ExerciseRow
+            v-for="ex in mainExercises"
+            :key="ex.id"
+            :exercise="ex"
+            @openSet="openSetModal"
+          />
         </div>
-        <ExerciseRow
-          v-for="ex in mainExercises"
-          :key="ex.id"
-          :exercise="ex"
-          @openSet="openSetModal"
-        />
       </div>
 
       <!-- Cardio fin -->
       <div v-if="cardioBlocks.length" class="section">
-        <div class="section-header">
-          <span class="section-label cardio">🏃 CARDIO FIN</span>
+        <button class="section-header" @click="toggle('cardio')">
+          <div class="section-left">
+            <span class="section-label cardio">🏃 CARDIO FIN</span>
+          </div>
+          <span class="section-chevron" :class="{ open: open.cardio }">›</span>
+        </button>
+        <div v-show="open.cardio" class="section-body">
+          <CardioBlock
+            v-for="(block, i) in cardioBlocks"
+            :key="block.id"
+            :block="block"
+            :index="i"
+          />
         </div>
-        <CardioBlock
-          v-for="(block, i) in cardioBlocks"
-          :key="block.id"
-          :block="block"
-          :index="i"
-        />
       </div>
     </div>
 
     <!-- Cardio day -->
     <div v-else-if="isCardio" class="session-content">
       <div class="section">
-        <div class="section-header">
-          <span class="section-label cardio">🏃 CARDIO</span>
+        <button class="section-header" @click="toggle('cardio')">
+          <div class="section-left">
+            <span class="section-label cardio">🏃 CARDIO</span>
+          </div>
+          <span class="section-chevron" :class="{ open: open.cardio }">›</span>
+        </button>
+        <div v-show="open.cardio" class="section-body">
+          <CardioBlock
+            v-for="(block, i) in cardioBlocks"
+            :key="block.id"
+            :block="block"
+            :index="i"
+          />
         </div>
-        <CardioBlock
-          v-for="(block, i) in cardioBlocks"
-          :key="block.id"
-          :block="block"
-          :index="i"
-        />
       </div>
     </div>
 
@@ -364,14 +406,58 @@ const streakWarning = computed(() => userStore.streak >= WARNING_STREAK)
 .section {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 0;
 }
 
 .section-header {
   display: flex;
   align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  background: #111827;
+  border: 1px solid #1f2937;
+  border-radius: 10px;
+  cursor: pointer;
+  width: 100%;
+  text-align: left;
+  transition: background 0.15s;
+  margin-bottom: 0;
+}
+
+.section-header:active { background: #1a2235; }
+
+.section-left {
+  display: flex;
+  align-items: center;
   gap: 8px;
-  padding: 4px 0;
+}
+
+.section-chevron {
+  font-size: 20px;
+  color: #4b5563;
+  transform: rotate(90deg);
+  transition: transform 0.2s ease;
+  line-height: 1;
+}
+
+.section-chevron.open {
+  transform: rotate(270deg);
+}
+
+.section-check {
+  font-size: 13px;
+  font-weight: 800;
+  color: #10b981;
+  background: rgba(16,185,129,0.12);
+  padding: 1px 7px;
+  border-radius: 10px;
+}
+
+.section-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 8px;
 }
 
 .section-label {
