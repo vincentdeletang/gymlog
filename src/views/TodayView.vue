@@ -35,9 +35,10 @@ const isRestDay = computed(() => dayType.value === 'rest')
 const isStrength = computed(() => dayType.value === 'strength')
 const isCardio = computed(() => dayType.value === 'cardio')
 
-const rehabExercises = computed(() => programStore.exercisesBySection.rehab)
-const mainExercises = computed(() => programStore.exercisesBySection.main)
-const cardioBlocks = computed(() => programStore.todayCardioBlocks)
+const rehabExercises    = computed(() => programStore.exercisesBySection.rehab)
+const mainExercises     = computed(() => programStore.exercisesBySection.main)
+const cooldownExercises = computed(() => programStore.exercisesBySection.cooldown)
+const cardioBlocks      = computed(() => programStore.todayCardioBlocks)
 
 const sessionComplete = computed(() => workoutStore.currentSession?.completed ?? false)
 
@@ -46,7 +47,7 @@ const canFinish = computed(() =>
 )
 
 const setsProgress = computed(() => {
-  const allExercises = [...rehabExercises.value, ...mainExercises.value]
+  const allExercises = [...rehabExercises.value, ...mainExercises.value, ...cooldownExercises.value]
   const total = allExercises.reduce((sum, ex) => sum + ex.sets_target, 0)
   const done  = allExercises.reduce((sum, ex) =>
     sum + Array.from({ length: ex.sets_target }, (_, i) => i + 1)
@@ -63,8 +64,8 @@ onMounted(async () => {
 })
 
 async function openSetModal({ exercise, setNumber }) {
-  // Rehab = tap to toggle, no modal needed
-  if (exercise.section === 'rehab') {
+  // Rehab/cooldown = tap to toggle, no modal needed
+  if (exercise.section === 'rehab' || exercise.section === 'cooldown') {
     const already = workoutStore.isSetLogged(exercise.id, setNumber)
     if (!already) {
       await workoutStore.logSet({ exerciseId: exercise.id, setNumber, weightKg: null, repsDone: null, rir: null })
@@ -115,7 +116,7 @@ const WARNING_STREAK = 7
 const streakWarning = computed(() => userStore.streak >= WARNING_STREAK)
 
 // Accordion state
-const open = ref({ rehab: true, main: true, cardio: true })
+const open = ref({ rehab: true, main: true, cooldown: true, cardio: true })
 function toggle(section) { open.value[section] = !open.value[section] }
 
 function isSectionDone(exercises) {
@@ -126,12 +127,14 @@ function isSectionDone(exercises) {
   )
 }
 
-const rehabDone  = computed(() => isSectionDone(rehabExercises.value))
-const mainDone   = computed(() => isSectionDone(mainExercises.value))
+const rehabDone    = computed(() => isSectionDone(rehabExercises.value))
+const mainDone     = computed(() => isSectionDone(mainExercises.value))
+const cooldownDone = computed(() => isSectionDone(cooldownExercises.value))
 
 // Auto-collapse when section is fully done
-watch(rehabDone, done => { if (done) open.value.rehab = false })
-watch(mainDone,  done => { if (done) open.value.main  = false })
+watch(rehabDone,    done => { if (done) open.value.rehab    = false })
+watch(mainDone,     done => { if (done) open.value.main     = false })
+watch(cooldownDone, done => { if (done) open.value.cooldown = false })
 </script>
 
 <template>
@@ -211,6 +214,26 @@ watch(mainDone,  done => { if (done) open.value.main  = false })
         <div v-show="open.main" class="section-body">
           <ExerciseRow
             v-for="ex in mainExercises"
+            :key="ex.id"
+            :exercise="ex"
+            @openSet="openSetModal"
+          />
+        </div>
+      </div>
+
+      <!-- COOLDOWN section -->
+      <div v-if="cooldownExercises.length" class="section">
+        <button class="section-header" @click="toggle('cooldown')">
+          <div class="section-left">
+            <span class="section-label cooldown">🧘 COOLDOWN</span>
+            <span class="section-sub">Après séance</span>
+            <span v-if="cooldownDone" class="section-check">✓</span>
+          </div>
+          <span class="section-chevron" :class="{ open: open.cooldown }">›</span>
+        </button>
+        <div v-show="open.cooldown" class="section-body">
+          <ExerciseRow
+            v-for="ex in cooldownExercises"
             :key="ex.id"
             :exercise="ex"
             @openSet="openSetModal"
@@ -468,9 +491,10 @@ watch(mainDone,  done => { if (done) open.value.main  = false })
   text-transform: uppercase;
 }
 
-.section-label.rehab  { color: #f59e0b; }
-.section-label.main   { color: #3b82f6; }
-.section-label.cardio { color: #10b981; }
+.section-label.rehab    { color: #f59e0b; }
+.section-label.main     { color: #3b82f6; }
+.section-label.cardio   { color: #10b981; }
+.section-label.cooldown { color: #8b5cf6; }
 
 .section-sub {
   font-size: 12px;

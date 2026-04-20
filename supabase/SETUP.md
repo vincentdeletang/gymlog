@@ -372,6 +372,20 @@ END $$;
 
 ---
 
+## 7. Migration 006 — Section cooldown
+
+> Ajoute `'cooldown'` comme type de section valide et bascule les suspensions de `rehab` → `cooldown`.
+
+```sql
+ALTER TABLE exercises DROP CONSTRAINT IF EXISTS exercises_section_check;
+ALTER TABLE exercises ADD CONSTRAINT exercises_section_check
+  CHECK (section IN ('main', 'rehab', 'cardio', 'cooldown'));
+
+UPDATE exercises SET section = 'cooldown' WHERE name = 'Suspension barre fixe';
+```
+
+---
+
 ## Récap — ce qui est auto-assigné
 
 | Exercice | Barre |

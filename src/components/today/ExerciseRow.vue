@@ -27,9 +27,10 @@ const suggestion = computed(() => {
 })
 
 const SECTION_BADGE = {
-  rehab:  { label: 'REHAB',  color: '#f59e0b' },
-  main:   { label: 'MAIN',   color: '#3b82f6' },
-  cardio: { label: 'CARDIO', color: '#10b981' },
+  rehab:    { label: 'REHAB',    color: '#f59e0b' },
+  main:     { label: 'MAIN',     color: '#3b82f6' },
+  cardio:   { label: 'CARDIO',   color: '#10b981' },
+  cooldown: { label: 'COOLDOWN', color: '#8b5cf6' },
 }
 </script>
 

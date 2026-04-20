@@ -51,7 +51,7 @@ insert into exercises (program_day_id, name, order_index, sets_target, reps_targ
   (d_lundi, 'Curl haltères hammer',       7, 3, '10-12', false, 'Prise neutre, mouvement lent, squeeze en haut', 'main'),
   (d_lundi, 'Curl haltère concentré',     8, 3, '12-15', false, 'Finisher biceps, contraction max',              'main'),
   (d_lundi, 'Plank',                      9, 3, '30-60s', true, null,                                            'main'),
-  (d_lundi, 'Suspension barre fixe',     10, 2, '30s',   true, 'Décompression vertébrale, relâchement complet, genoux pliés si besoin', 'rehab');
+  (d_lundi, 'Suspension barre fixe',     10, 2, '30s',   true, 'Décompression vertébrale, relâchement complet, genoux pliés si besoin', 'cooldown');
 
 -- CARDIO FIN
 insert into cardio_blocks (program_day_id, name, duration_minutes, order_index, notes) values
@@ -72,7 +72,7 @@ insert into exercises (program_day_id, name, order_index, sets_target, reps_targ
   (d_mercredi, 'Soulevé de terre jambes tendues (barre)',   2, 3, '10-12',    false, 'Dos plat, descente contrôlée le long des jambes, étirement ischio en bas',                      'main'),
   (d_mercredi, 'Mollets debout (barre)',                    3, 4, '15-20',    false, 'Monter sur disque pour amplitude',                                                               'main'),
   (d_mercredi, 'Reverse crunches',                          4, 3, '15-20',    true,  null,                                                                                              'main'),
-  (d_mercredi, 'Suspension barre fixe',                     5, 2, '30s',      true,  'Décompression vertébrale, relâchement complet, genoux pliés si besoin',                       'rehab');
+  (d_mercredi, 'Suspension barre fixe',                     5, 2, '30s',      true,  'Décompression vertébrale, relâchement complet, genoux pliés si besoin',                       'cooldown');
 
 insert into cardio_blocks (program_day_id, name, duration_minutes, order_index, notes) values
   (d_mercredi, 'Tapis 3%', 30, 1, 'FC cible 110-130 bpm');
@@ -102,7 +102,7 @@ insert into exercises (program_day_id, name, order_index, sets_target, reps_targ
   (d_vendredi, 'Extensions triceps barre EZ',             7, 4, '10-12', false, 'Coudes fixes pointés plafond',                     'main'),
   (d_vendredi, 'Kickbacks haltères',                      8, 4, '12-15', false, 'Finisher triceps, serrer en extension',            'main'),
   (d_vendredi, 'Crunchs',                                 9, 3, '15-20', true,  null,                                               'main'),
-  (d_vendredi, 'Suspension barre fixe',                  10, 2, '30s',   true,  'Décompression vertébrale, relâchement complet, genoux pliés si besoin', 'rehab');
+  (d_vendredi, 'Suspension barre fixe',                  10, 2, '30s',   true,  'Décompression vertébrale, relâchement complet, genoux pliés si besoin', 'cooldown');
 
 insert into cardio_blocks (program_day_id, name, duration_minutes, order_index, notes) values
   (d_vendredi, 'Corde à sauter ou Tapis', 25, 1, null);
