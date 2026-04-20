@@ -111,14 +111,27 @@ export const useWorkoutStore = defineStore('workout', () => {
     // Optimistic local update
     if (existing) {
       const idx = setLogs.value.indexOf(existing)
-      setLogs.value[idx] = { ...existing, ...payload }
+      setLogs.value.splice(idx, 1, { ...existing, ...payload })
     } else {
       setLogs.value.push(payload)
     }
 
-    // Try Supabase, fall back to offline queue
+    // Try Supabase — update vs insert to avoid upsert ambiguity
     try {
-      const { error } = await supabase.from('set_logs').upsert(payload)
+      let error
+      if (existing) {
+        ;({ error } = await supabase
+          .from('set_logs')
+          .update({
+            weight_kg: payload.weight_kg,
+            reps_done: payload.reps_done,
+            rir: payload.rir,
+            logged_at: payload.logged_at,
+          })
+          .eq('id', existing.id))
+      } else {
+        ;({ error } = await supabase.from('set_logs').insert(payload))
+      }
       if (error) throw error
     } catch {
       await queueSetLog(payload)
@@ -176,7 +189,7 @@ export const useWorkoutStore = defineStore('workout', () => {
   async function fetchSessionDetail(sessionId) {
     const { data } = await supabase
       .from('set_logs')
-      .select('*, exercises(name, section, is_bodyweight)')
+      .select('*, exercises(name, section, is_bodyweight, bar_weight_kg)')
       .eq('session_id', sessionId)
       .order('logged_at')
     return data ?? []

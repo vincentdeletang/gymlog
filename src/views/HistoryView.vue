@@ -55,6 +55,11 @@ async function openDetail(session) {
   loadingDetail.value = false
 }
 
+function displayWeight(log) {
+  if (!log.weight_kg) return null
+  return log.weight_kg + (log.exercises?.bar_weight_kg ?? 0)
+}
+
 function formatDate(dateStr) {
   const d = new Date(dateStr)
   return d.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })
@@ -144,7 +149,7 @@ const groupedDetail = computed(() => {
           >
             <span class="log-name">{{ log.exercises?.name }}</span>
             <div class="log-data">
-              <span v-if="log.weight_kg" class="log-weight">{{ log.weight_kg }}kg</span>
+              <span v-if="log.weight_kg" class="log-weight">{{ displayWeight(log) }}kg</span>
               <span class="log-reps">{{ log.reps_done }} reps</span>
               <span class="log-rir" v-if="log.rir != null">RIR {{ log.rir }}</span>
               <span class="log-set">S{{ log.set_number }}</span>

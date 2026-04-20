@@ -87,9 +87,22 @@ export const useProgramStore = defineStore('program', () => {
       .sort((a, b) => a.order_index - b.order_index)
   }
 
+  async function updateBarWeight(exerciseId, barWeightKg) {
+    const { error } = await supabase
+      .from('exercises')
+      .update({ bar_weight_kg: barWeightKg })
+      .eq('id', exerciseId)
+    if (!error) {
+      const ex = exercises.value.find(e => e.id === exerciseId)
+      if (ex) ex.bar_weight_kg = barWeightKg
+    }
+    return !error
+  }
+
   return {
     activeProgram, programDays, exercises, cardioBlocks, loading,
     todayDay, todayProgramDay, todayExercises, todayCardioBlocks, exercisesBySection,
     fetchActiveProgram, getProgramDayById, getExercisesForDay, getCardioBlocksForDay,
+    updateBarWeight,
   }
 })

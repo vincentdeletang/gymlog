@@ -1,12 +1,36 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useUserStore } from '@/stores/useUserStore'
 import { useWorkoutStore } from '@/stores/useWorkoutStore'
+import { useProgramStore } from '@/stores/useProgramStore'
 import { useRouter } from 'vue-router'
 
 const userStore = useUserStore()
 const workoutStore = useWorkoutStore()
+const programStore = useProgramStore()
 const router = useRouter()
+
+const barWeights = ref({})
+const savingId = ref(null)
+
+const nonBodyweightExercises = computed(() =>
+  programStore.exercises.filter(e => !e.is_bodyweight)
+)
+
+onMounted(async () => {
+  if (!programStore.exercises.length) await programStore.fetchActiveProgram()
+  for (const e of programStore.exercises) {
+    barWeights.value[e.id] = e.bar_weight_kg != null ? String(e.bar_weight_kg) : ''
+  }
+})
+
+async function saveBarWeight(exerciseId) {
+  savingId.value = exerciseId
+  const raw = barWeights.value[exerciseId]
+  const val = raw === '' ? null : (parseFloat(raw) || null)
+  await programStore.updateBarWeight(exerciseId, val)
+  savingId.value = null
+}
 
 const exporting = ref(false)
 const exported = ref(false)
@@ -95,6 +119,36 @@ async function signOut() {
           </div>
         </div>
       </div>
+    </div>
+
+    <!-- Equipment tare section -->
+    <div class="settings-section">
+      <div class="section-label">Équipement (tare)</div>
+      <div class="tare-note">Entre le poids de ta barre/haltère. Seuls les disques sont loggés à l'entraînement — la tare est ajoutée dans l'historique et les stats.</div>
+      <div v-if="nonBodyweightExercises.length" class="tare-list">
+        <div
+          v-for="ex in nonBodyweightExercises"
+          :key="ex.id"
+          class="tare-row"
+        >
+          <span class="tare-name">{{ ex.name }}</span>
+          <div class="tare-input-wrap">
+            <input
+              v-model="barWeights[ex.id]"
+              type="number"
+              inputmode="decimal"
+              step="0.5"
+              min="0"
+              placeholder="0"
+              class="tare-input"
+              @blur="saveBarWeight(ex.id)"
+            />
+            <span class="tare-unit">kg</span>
+            <span v-if="savingId === ex.id" class="tare-saving">…</span>
+          </div>
+        </div>
+      </div>
+      <div v-else class="tare-note" style="margin-top: 8px; color: #4b5563">Aucun exercice chargé.</div>
     </div>
 
     <!-- Export section -->
@@ -244,6 +298,76 @@ async function signOut() {
 }
 
 .signout-btn:active { background: rgba(239,68,68,0.08); }
+
+.tare-note {
+  font-size: 12px;
+  color: #6b7280;
+  line-height: 1.5;
+  margin-bottom: 10px;
+}
+
+.tare-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.tare-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 1px solid #111827;
+}
+
+.tare-row:last-child { border-bottom: none; }
+
+.tare-name {
+  font-size: 14px;
+  color: #e5e7eb;
+  font-weight: 500;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-right: 12px;
+}
+
+.tare-input-wrap {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.tare-input {
+  width: 64px;
+  background: #1f2937;
+  border: 1px solid #374151;
+  border-radius: 8px;
+  color: #f9fafb;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 16px;
+  font-weight: 700;
+  text-align: right;
+  padding: 6px 8px;
+  outline: none;
+}
+
+.tare-input:focus { border-color: #3b82f6; }
+
+.tare-unit {
+  font-size: 13px;
+  color: #6b7280;
+  font-weight: 600;
+}
+
+.tare-saving {
+  font-size: 12px;
+  color: #3b82f6;
+  width: 14px;
+}
 
 .app-info {
   padding: 16px;

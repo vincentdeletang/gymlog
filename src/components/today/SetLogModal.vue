@@ -49,6 +49,13 @@ watch([() => props.existingLog, () => props.sessionPrevSet, () => props.previous
   }
 }, { immediate: true })
 
+const totalWeight = computed(() => {
+  const discs = parseFloat(weightKg.value)
+  const tare = props.exercise?.bar_weight_kg ?? 0
+  if (!discs || !tare) return null
+  return discs + tare
+})
+
 const progression = computed(() => {
   if (!props.previousLog || props.exercise?.is_bodyweight) return null
   const prev = props.previousLog
@@ -129,7 +136,10 @@ function save() {
 
           <!-- Weight field (hidden if bodyweight) -->
           <div v-if="!exercise?.is_bodyweight" class="field">
-            <label>Poids (kg)</label>
+            <label>
+              Disques (kg)
+              <span v-if="exercise?.bar_weight_kg" class="target">+ {{ exercise.bar_weight_kg }}kg barre</span>
+            </label>
             <input
               v-model="weightKg"
               type="number"
@@ -139,6 +149,7 @@ function save() {
               placeholder="Ex: 20"
               class="field-input"
             />
+            <div v-if="totalWeight" class="total-hint">→ {{ totalWeight }} kg charge totale</div>
           </div>
 
           <!-- Reps -->
@@ -352,6 +363,14 @@ function save() {
   text-align: center;
   margin-top: 2px;
   line-height: 1.2;
+}
+
+.total-hint {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  color: #6b7280;
+  letter-spacing: 0.3px;
 }
 
 .notes {
