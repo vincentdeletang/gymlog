@@ -41,6 +41,17 @@ watch([() => props.existingLog, () => props.sessionPrevSet], ([log, prev]) => {
   }
 }, { immediate: true })
 
+const progression = computed(() => {
+  if (!props.previousLog || props.exercise?.is_bodyweight) return null
+  const rir = props.previousLog.rir
+  const w = props.previousLog.weight_kg
+  if (rir == null) return { icon: '📊', text: `Dernière fois : ${w}kg`, color: '#9ca3af' }
+  if (rir >= 3) return { icon: '🚀', text: `↑ Augmente ! (RIR ${rir} last time)`, color: '#10b981' }
+  if (rir === 2) return { icon: '↑', text: `Essaie +2.5kg (RIR ${rir} last time)`, color: '#3b82f6' }
+  if (rir === 1) return { icon: '=', text: `Maintiens ${w}kg (RIR ${rir} last time)`, color: '#f59e0b' }
+  return { icon: '⚠️', text: `C'était ton max (RIR 0) — même poids`, color: '#ef4444' }
+})
+
 function save() {
   emit('save', {
     weightKg: props.exercise?.is_bodyweight ? null : (parseFloat(weightKg.value) || null),
@@ -66,16 +77,21 @@ function save() {
             <span class="set-badge">Série {{ setNumber }}</span>
           </div>
 
-          <!-- Previous hint -->
-          <div v-if="previousLog" class="hint">
-            <span class="hint-label">Dernière fois :</span>
-            <span class="hint-val">
-              <template v-if="!exercise?.is_bodyweight && previousLog.weight_kg">
-                {{ previousLog.weight_kg }}kg ×
-              </template>
-              {{ previousLog.reps_done }} reps
-              <span v-if="previousLog.rir != null"> · RIR {{ previousLog.rir }}</span>
-            </span>
+          <!-- Previous session block -->
+          <div v-if="previousLog" class="prev-block">
+            <div class="prev-row">
+              <span class="prev-label">Dernière fois</span>
+              <span class="prev-vals">
+                <template v-if="!exercise?.is_bodyweight && previousLog.weight_kg">
+                  <strong>{{ previousLog.weight_kg }}kg</strong> ×
+                </template>
+                {{ previousLog.reps_done }} reps
+                <span v-if="previousLog.rir != null" class="prev-rir">RIR {{ previousLog.rir }}</span>
+              </span>
+            </div>
+            <div v-if="progression" class="progression-badge" :style="{ color: progression.color, borderColor: progression.color + '44', background: progression.color + '11' }">
+              {{ progression.icon }} {{ progression.text }}
+            </div>
           </div>
 
           <!-- Weight field (hidden if bodyweight) -->
@@ -184,24 +200,56 @@ function save() {
   white-space: nowrap;
 }
 
-.hint {
+.prev-block {
   background: #1f2937;
-  border-radius: 8px;
-  padding: 8px 12px;
+  border-radius: 10px;
+  padding: 10px 12px;
   display: flex;
+  flex-direction: column;
   gap: 8px;
+}
+
+.prev-row {
+  display: flex;
   align-items: center;
-  font-size: 14px;
+  justify-content: space-between;
+  gap: 8px;
 }
 
-.hint-label {
-  color: #9ca3af;
-  font-size: 12px;
-}
-
-.hint-val {
-  color: #60a5fa;
+.prev-label {
+  font-size: 11px;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
   font-weight: 600;
+}
+
+.prev-vals {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 16px;
+  color: #e5e7eb;
+  font-weight: 600;
+}
+
+.prev-vals strong {
+  color: #60a5fa;
+  font-size: 18px;
+}
+
+.prev-rir {
+  font-size: 12px;
+  color: #9ca3af;
+  margin-left: 4px;
+}
+
+.progression-badge {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid;
+  letter-spacing: 0.3px;
 }
 
 .field {
