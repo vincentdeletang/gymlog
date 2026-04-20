@@ -23,17 +23,34 @@ const RIR_OPTIONS = [
   { value: 4, label: '4+', sub: 'Léger',   color: '#6b7280' },
 ]
 
-watch([() => props.existingLog, () => props.sessionPrevSet], ([log, prev]) => {
+// Parse "10-12", "12-15", "15-20" → { min, max }. Returns null for timed sets ("30s", "30-60s").
+function parseRepsTarget(target) {
+  if (!target || /s$/.test(target)) return null
+  const clean = target.replace(/\/.*$/, '').trim() // remove "/jambe" etc
+  const match = clean.match(/^(\d+)-(\d+)$/)
+  if (match) return { min: parseInt(match[1]), max: parseInt(match[2]) }
+  const single = clean.match(/^(\d+)$/)
+  if (single) return { min: parseInt(single[1]), max: parseInt(single[1]) }
+  return null
+}
+
+watch([() => props.existingLog, () => props.sessionPrevSet, () => props.previousLog], ([log, prev, last]) => {
   if (log) {
-    // Editing an already-logged set → load its values
     weightKg.value = log.weight_kg ?? ''
     repsDone.value = log.reps_done ?? ''
     rir.value = log.rir ?? 2
   } else if (prev) {
-    // New set → pre-fill from previous set of this exercise in current session
     weightKg.value = prev.weight_kg ?? ''
     repsDone.value = prev.reps_done ?? ''
     rir.value = prev.rir ?? 2
+  } else if (last?.weight_kg) {
+    // First set of session → suggest weight based on progression
+    const range = parseRepsTarget(props.exercise?.reps_target)
+    const hitTop = range && last.reps_done != null && last.reps_done >= range.max
+    const goodRIR = last.rir == null || last.rir >= 2
+    weightKg.value = (hitTop && goodRIR) ? String(last.weight_kg + 2) : String(last.weight_kg)
+    repsDone.value = ''
+    rir.value = 2
   } else {
     weightKg.value = ''
     repsDone.value = ''
@@ -43,13 +60,38 @@ watch([() => props.existingLog, () => props.sessionPrevSet], ([log, prev]) => {
 
 const progression = computed(() => {
   if (!props.previousLog || props.exercise?.is_bodyweight) return null
-  const rir = props.previousLog.rir
-  const w = props.previousLog.weight_kg
-  if (rir == null) return { icon: '📊', text: `Dernière fois : ${w}kg`, color: '#9ca3af' }
-  if (rir >= 3) return { icon: '🚀', text: `↑ Augmente ! (RIR ${rir} last time)`, color: '#10b981' }
-  if (rir === 2) return { icon: '↑', text: `Essaie +2.5kg (RIR ${rir} last time)`, color: '#3b82f6' }
-  if (rir === 1) return { icon: '=', text: `Maintiens ${w}kg (RIR ${rir} last time)`, color: '#f59e0b' }
-  return { icon: '⚠️', text: `C'était ton max (RIR 0) — même poids`, color: '#ef4444' }
+  const prev = props.previousLog
+  if (!prev.weight_kg) return null
+
+  const range = parseRepsTarget(props.exercise?.reps_target)
+
+  if (!range) {
+    // Timed exercise — just show last weight
+    return { icon: '📊', text: `Dernière fois : ${prev.weight_kg}kg`, color: '#9ca3af' }
+  }
+
+  const hitTop = prev.reps_done != null && prev.reps_done >= range.max
+  const goodRIR = prev.rir == null || prev.rir >= 2
+
+  if (hitTop && goodRIR) {
+    return {
+      icon: '🚀',
+      text: `${prev.weight_kg}kg × ${prev.reps_done} reps — Augmente → ${prev.weight_kg + 2}kg`,
+      color: '#10b981',
+    }
+  }
+  if (hitTop && !goodRIR) {
+    return {
+      icon: '⚠️',
+      text: `${prev.weight_kg}kg × ${prev.reps_done} reps mais RIR ${prev.rir} — maintiens`,
+      color: '#f59e0b',
+    }
+  }
+  return {
+    icon: '↗',
+    text: `${prev.weight_kg}kg × ${prev.reps_done ?? '?'} reps — vise ${range.max} reps avant d'augmenter`,
+    color: '#3b82f6',
+  }
 })
 
 function save() {
