@@ -57,7 +57,7 @@ async function openDetail(session) {
 
 function displayWeight(log) {
   if (!log.weight_kg) return null
-  return log.weight_kg + (log.exercises?.bar_weight_kg ?? 0)
+  return log.weight_kg + (log.exercises?.bars?.weight_kg ?? 0)
 }
 
 function formatDate(dateStr) {

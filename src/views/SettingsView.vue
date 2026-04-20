@@ -10,7 +10,7 @@ const workoutStore = useWorkoutStore()
 const programStore = useProgramStore()
 const router = useRouter()
 
-const barWeights = ref({})
+const selectedBars = ref({})
 const savingId = ref(null)
 
 const nonBodyweightExercises = computed(() =>
@@ -20,15 +20,14 @@ const nonBodyweightExercises = computed(() =>
 onMounted(async () => {
   if (!programStore.exercises.length) await programStore.fetchActiveProgram()
   for (const e of programStore.exercises) {
-    barWeights.value[e.id] = e.bar_weight_kg != null ? String(e.bar_weight_kg) : ''
+    selectedBars.value[e.id] = e.bar_id ?? ''
   }
 })
 
-async function saveBarWeight(exerciseId) {
+async function saveExerciseBar(exerciseId) {
   savingId.value = exerciseId
-  const raw = barWeights.value[exerciseId]
-  const val = raw === '' ? null : (parseFloat(raw) || null)
-  await programStore.updateBarWeight(exerciseId, val)
+  const barId = selectedBars.value[exerciseId] || null
+  await programStore.updateExerciseBar(exerciseId, barId)
   savingId.value = null
 }
 
@@ -124,7 +123,7 @@ async function signOut() {
     <!-- Equipment tare section -->
     <div class="settings-section">
       <div class="section-label">Équipement (tare)</div>
-      <div class="tare-note">Entre le poids de ta barre/haltère. Seuls les disques sont loggés à l'entraînement — la tare est ajoutée dans l'historique et les stats.</div>
+      <div class="tare-note">Associe une barre à chaque exercice. Le poids de la barre est ajouté automatiquement dans l'historique et les stats — pendant l'entraînement tu entres seulement les disques.</div>
       <div v-if="nonBodyweightExercises.length" class="tare-list">
         <div
           v-for="ex in nonBodyweightExercises"
@@ -132,18 +131,17 @@ async function signOut() {
           class="tare-row"
         >
           <span class="tare-name">{{ ex.name }}</span>
-          <div class="tare-input-wrap">
-            <input
-              v-model="barWeights[ex.id]"
-              type="number"
-              inputmode="decimal"
-              step="0.5"
-              min="0"
-              placeholder="0"
-              class="tare-input"
-              @blur="saveBarWeight(ex.id)"
-            />
-            <span class="tare-unit">kg</span>
+          <div class="tare-select-wrap">
+            <select
+              v-model="selectedBars[ex.id]"
+              class="bar-select"
+              @change="saveExerciseBar(ex.id)"
+            >
+              <option value="">Aucune</option>
+              <option v-for="bar in programStore.bars" :key="bar.id" :value="bar.id">
+                {{ bar.name }} ({{ bar.weight_kg }}kg)
+              </option>
+            </select>
             <span v-if="savingId === ex.id" class="tare-saving">…</span>
           </div>
         </div>
@@ -309,13 +307,13 @@ async function signOut() {
 .tare-list {
   display: flex;
   flex-direction: column;
-  gap: 2px;
 }
 
 .tare-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 10px;
   padding: 8px 0;
   border-bottom: 1px solid #111827;
 }
@@ -331,37 +329,29 @@ async function signOut() {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  margin-right: 12px;
 }
 
-.tare-input-wrap {
+.tare-select-wrap {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
   flex-shrink: 0;
 }
 
-.tare-input {
-  width: 64px;
+.bar-select {
   background: #1f2937;
   border: 1px solid #374151;
   border-radius: 8px;
   color: #f9fafb;
-  font-family: 'Barlow Condensed', sans-serif;
-  font-size: 16px;
-  font-weight: 700;
-  text-align: right;
+  font-size: 13px;
+  font-weight: 500;
   padding: 6px 8px;
   outline: none;
+  cursor: pointer;
+  max-width: 160px;
 }
 
-.tare-input:focus { border-color: #3b82f6; }
-
-.tare-unit {
-  font-size: 13px;
-  color: #6b7280;
-  font-weight: 600;
-}
+.bar-select:focus { border-color: #3b82f6; }
 
 .tare-saving {
   font-size: 12px;

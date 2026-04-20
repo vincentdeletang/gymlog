@@ -51,7 +51,7 @@ watch([() => props.existingLog, () => props.sessionPrevSet, () => props.previous
 
 const totalWeight = computed(() => {
   const discs = parseFloat(weightKg.value)
-  const tare = props.exercise?.bar_weight_kg ?? 0
+  const tare = props.exercise?.bars?.weight_kg ?? 0
   if (!discs || !tare) return null
   return discs + tare
 })
@@ -138,7 +138,7 @@ function save() {
           <div v-if="!exercise?.is_bodyweight" class="field">
             <label>
               Disques (kg)
-              <span v-if="exercise?.bar_weight_kg" class="target">+ {{ exercise.bar_weight_kg }}kg barre</span>
+              <span v-if="exercise?.bars" class="target">+ {{ exercise.bars.weight_kg }}kg {{ exercise.bars.name }}</span>
             </label>
             <input
               v-model="weightKg"

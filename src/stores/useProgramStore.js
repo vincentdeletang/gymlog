@@ -7,6 +7,7 @@ export const useProgramStore = defineStore('program', () => {
   const programDays = ref([])
   const exercises = ref([])
   const cardioBlocks = ref([])
+  const bars = ref([])
   const loading = ref(false)
 
   const todayDay = computed(() => new Date().getDay()) // 0=Sun..6=Sat
@@ -55,11 +56,14 @@ export const useProgramStore = defineStore('program', () => {
 
       programDays.value = days ?? []
 
+      const { data: barsData } = await supabase.from('bars').select('*').order('weight_kg')
+      bars.value = barsData ?? []
+
       if (days?.length) {
         const dayIds = days.map(d => d.id)
 
         const [{ data: exs }, { data: cbs }] = await Promise.all([
-          supabase.from('exercises').select('*').in('program_day_id', dayIds).order('order_index'),
+          supabase.from('exercises').select('*, bars(id, name, weight_kg)').in('program_day_id', dayIds).order('order_index'),
           supabase.from('cardio_blocks').select('*').in('program_day_id', dayIds).order('order_index'),
         ])
 
@@ -87,22 +91,25 @@ export const useProgramStore = defineStore('program', () => {
       .sort((a, b) => a.order_index - b.order_index)
   }
 
-  async function updateBarWeight(exerciseId, barWeightKg) {
+  async function updateExerciseBar(exerciseId, barId) {
     const { error } = await supabase
       .from('exercises')
-      .update({ bar_weight_kg: barWeightKg })
+      .update({ bar_id: barId })
       .eq('id', exerciseId)
     if (!error) {
       const ex = exercises.value.find(e => e.id === exerciseId)
-      if (ex) ex.bar_weight_kg = barWeightKg
+      if (ex) {
+        ex.bar_id = barId
+        ex.bars = barId ? (bars.value.find(b => b.id === barId) ?? null) : null
+      }
     }
     return !error
   }
 
   return {
-    activeProgram, programDays, exercises, cardioBlocks, loading,
+    activeProgram, programDays, exercises, cardioBlocks, bars, loading,
     todayDay, todayProgramDay, todayExercises, todayCardioBlocks, exercisesBySection,
     fetchActiveProgram, getProgramDayById, getExercisesForDay, getCardioBlocksForDay,
-    updateBarWeight,
+    updateExerciseBar,
   }
 })

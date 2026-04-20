@@ -189,7 +189,7 @@ export const useWorkoutStore = defineStore('workout', () => {
   async function fetchSessionDetail(sessionId) {
     const { data } = await supabase
       .from('set_logs')
-      .select('*, exercises(name, section, is_bodyweight, bar_weight_kg)')
+      .select('*, exercises(name, section, is_bodyweight, bars(weight_kg))')
       .eq('session_id', sessionId)
       .order('logged_at')
     return data ?? []
