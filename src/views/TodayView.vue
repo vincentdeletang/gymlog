@@ -41,18 +41,9 @@ const cardioBlocks = computed(() => programStore.todayCardioBlocks)
 
 const sessionComplete = computed(() => workoutStore.currentSession?.completed ?? false)
 
-const canFinish = computed(() => {
-  if (sessionComplete.value) return false
-  if (!workoutStore.currentSession) return false
-  if (isStrength.value) {
-    const allExercises = [...rehabExercises.value, ...mainExercises.value]
-    return allExercises.every(ex =>
-      Array.from({ length: ex.sets_target }, (_, i) => i + 1)
-        .every(s => workoutStore.isSetLogged(ex.id, s))
-    )
-  }
-  return true
-})
+const canFinish = computed(() =>
+  !sessionComplete.value && !!workoutStore.currentSession
+)
 
 onMounted(async () => {
   await programStore.fetchActiveProgram()
@@ -410,8 +401,6 @@ const streakWarning = computed(() => userStore.streak >= WARNING_STREAK)
 
 .finish-zone {
   padding: 16px;
-  position: sticky;
-  bottom: 72px;
 }
 
 .finish-btn {
