@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import SetButton from './SetButton.vue'
 import { useWorkoutStore } from '@/stores/useWorkoutStore'
+import { suggestedWeight } from '@/lib/progression'
 
 const props = defineProps({
   exercise: Object,
@@ -18,6 +19,12 @@ const sets = computed(() =>
 const allLogged = computed(() =>
   sets.value.every(s => workoutStore.isSetLogged(props.exercise.id, s))
 )
+
+const suggestion = computed(() => {
+  if (props.exercise.is_bodyweight || props.exercise.section === 'rehab') return null
+  const prev = workoutStore.getPreviousSet(props.exercise.id, 1)
+  return suggestedWeight(prev, props.exercise.reps_target)
+})
 
 const SECTION_BADGE = {
   rehab:  { label: 'REHAB',  color: '#f59e0b' },
@@ -39,6 +46,9 @@ const SECTION_BADGE = {
       <div class="ex-meta">
         <span class="ex-sets">{{ exercise.sets_target }}×{{ exercise.reps_target }}</span>
         <span v-if="exercise.is_bodyweight" class="bw-badge">BW</span>
+        <span v-if="suggestion" class="weight-suggestion" :class="{ increased: suggestion.increased }">
+          {{ suggestion.increased ? '↑' : '=' }} {{ suggestion.weight }}kg
+        </span>
       </div>
     </div>
 
@@ -126,6 +136,22 @@ const SECTION_BADGE = {
   font-weight: 700;
   padding: 2px 6px;
   border-radius: 4px;
+}
+
+.weight-suggestion {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 14px;
+  font-weight: 800;
+  color: #60a5fa;
+  background: rgba(59, 130, 246, 0.1);
+  padding: 2px 8px;
+  border-radius: 6px;
+  letter-spacing: 0.5px;
+}
+
+.weight-suggestion.increased {
+  color: #10b981;
+  background: rgba(16, 185, 129, 0.1);
 }
 
 .ex-notes {

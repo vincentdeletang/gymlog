@@ -1,5 +1,6 @@
 <script setup>
 import { ref, computed, watch } from 'vue'
+import { parseRepsTarget } from '@/lib/progression'
 
 const props = defineProps({
   exercise: Object,
@@ -23,16 +24,6 @@ const RIR_OPTIONS = [
   { value: 4, label: '4+', sub: 'Léger',   color: '#6b7280' },
 ]
 
-// Parse "10-12", "12-15", "15-20" → { min, max }. Returns null for timed sets ("30s", "30-60s").
-function parseRepsTarget(target) {
-  if (!target || /s$/.test(target)) return null
-  const clean = target.replace(/\/.*$/, '').trim() // remove "/jambe" etc
-  const match = clean.match(/^(\d+)-(\d+)$/)
-  if (match) return { min: parseInt(match[1]), max: parseInt(match[2]) }
-  const single = clean.match(/^(\d+)$/)
-  if (single) return { min: parseInt(single[1]), max: parseInt(single[1]) }
-  return null
-}
 
 watch([() => props.existingLog, () => props.sessionPrevSet, () => props.previousLog], ([log, prev, last]) => {
   if (log) {
