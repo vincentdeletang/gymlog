@@ -13,13 +13,47 @@ const programStore = useProgramStore()
 
 const recentSessions = ref([])
 const weeklyData = ref([])
-const selectedExercise = ref(null)
-const weightData = ref([])
+const selectedExercise = ref('')
+const loadingChart = ref(false)
+const chartData = ref({ labels: [], values: [], exerciseName: '' })
+
+const exercisesForChart = computed(() =>
+  programStore.exercises.filter(e => !e.is_bodyweight && e.section !== 'rehab')
+)
 
 onMounted(async () => {
+  if (!programStore.exercises.length) await programStore.fetchActiveProgram()
   recentSessions.value = await workoutStore.fetchHistory(30)
   weeklyData.value = await workoutStore.fetchWeeklyVolume(8)
 })
+
+async function loadWeightData() {
+  if (!selectedExercise.value) return
+  loadingChart.value = true
+
+  const raw = await workoutStore.fetchWeightProgress(selectedExercise.value, 16)
+  const ex = programStore.exercises.find(e => e.id === selectedExercise.value)
+  const tare = ex?.bars?.weight_kg ?? 0
+
+  const byDate = {}
+  for (const log of raw) {
+    const date = log.workout_sessions?.session_date
+    if (!date || !log.weight_kg) continue
+    const total = log.weight_kg + tare
+    if (!byDate[date] || total > byDate[date]) byDate[date] = total
+  }
+
+  const sortedDates = Object.keys(byDate).sort()
+  chartData.value = {
+    labels: sortedDates.map(d =>
+      new Date(d).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })
+    ),
+    values: sortedDates.map(d => byDate[d]),
+    exerciseName: ex?.name ?? '',
+  }
+
+  loadingChart.value = false
+}
 
 const totalSessions = computed(() => recentSessions.value.filter(s => s.completed).length)
 
@@ -110,6 +144,39 @@ const rirWarningExercises = computed(() => {
       />
     </div>
 
+    <!-- Weight progression per exercise -->
+    <div class="section-block">
+      <div class="block-title">Progression par exercice</div>
+      <select v-model="selectedExercise" class="ex-select" @change="loadWeightData">
+        <option value="">Choisir un exercice…</option>
+        <option v-for="ex in exercisesForChart" :key="ex.id" :value="ex.id">
+          {{ ex.name }}
+        </option>
+      </select>
+      <div v-if="loadingChart" class="chart-loading">
+        <div class="spinner" />
+      </div>
+      <ProgressChart
+        v-else-if="chartData.labels.length > 1"
+        type="line"
+        :labels="chartData.labels"
+        :datasets="[{
+          label: chartData.exerciseName,
+          data: chartData.values,
+          borderColor: '#3b82f6',
+          backgroundColor: 'rgba(59,130,246,0.08)',
+          tension: 0.3,
+          fill: true,
+          pointBackgroundColor: '#3b82f6',
+          pointRadius: 4,
+          pointHoverRadius: 6,
+        }]"
+      />
+      <div v-else-if="selectedExercise && !loadingChart" class="chart-empty">
+        Pas encore assez de données — reviens après 2 séances.
+      </div>
+    </div>
+
     <!-- Session type donut -->
     <div class="section-block" v-if="Object.values(typeDistribution).some(v => v > 0)">
       <div class="block-title">Répartition des séances</div>
@@ -184,4 +251,43 @@ const rirWarningExercises = computed(() => {
 }
 
 .empty-icon { font-size: 40px; }
+
+.ex-select {
+  width: 100%;
+  background: #1f2937;
+  border: 1px solid #374151;
+  border-radius: 10px;
+  color: #f9fafb;
+  font-size: 15px;
+  font-weight: 500;
+  padding: 10px 12px;
+  outline: none;
+  cursor: pointer;
+}
+
+.ex-select:focus { border-color: #3b82f6; }
+
+.chart-loading {
+  display: flex;
+  justify-content: center;
+  padding: 24px;
+}
+
+.spinner {
+  width: 24px;
+  height: 24px;
+  border: 3px solid #1f2937;
+  border-top-color: #3b82f6;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.chart-empty {
+  text-align: center;
+  font-size: 13px;
+  color: #4b5563;
+  padding: 16px 0;
+}
 </style>
