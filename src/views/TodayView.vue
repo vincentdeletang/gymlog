@@ -62,7 +62,16 @@ onMounted(async () => {
   loading.value = false
 })
 
-function openSetModal({ exercise, setNumber }) {
+async function openSetModal({ exercise, setNumber }) {
+  // Rehab = tap to toggle, no modal needed
+  if (exercise.section === 'rehab') {
+    const already = workoutStore.isSetLogged(exercise.id, setNumber)
+    if (!already) {
+      await workoutStore.logSet({ exerciseId: exercise.id, setNumber, weightKg: null, repsDone: null, rir: null })
+      playSuccess()
+    }
+    return
+  }
   modalExercise.value = exercise
   modalSetNumber.value = setNumber
   modalOpen.value = true
