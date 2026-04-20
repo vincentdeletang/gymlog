@@ -48,8 +48,8 @@ insert into exercises (program_day_id, name, order_index, sets_target, reps_targ
 insert into exercises (program_day_id, name, order_index, sets_target, reps_target, is_bodyweight, notes, section) values
   (d_lundi, 'Plank',                               5, 3, '30-60s', true,  null,                                                                                                        'main'),
   (d_lundi, 'Rowing barre (barres de sécurité)',   6, 4, '8-10',   false, 'Barres à hauteur mi-tibia ou genoux, dos parallèle au sol, tirer vers le nombril, coudes proches du corps', 'main'),
-  (d_lundi, 'Rowing haltère unilatéral',           7, 3, '12',     false, 'Appui genou + main sur le banc, dos neutre, amplitude complète, squeeze en haut',                           'main'),
-  (d_lundi, 'Curl barre EZ (supination)',          8, 4, '10-12',  false, 'Coudes fixes le long du corps, pas de balancement, descente contrôlée',                                    'main'),
+  (d_lundi, 'Curl barre EZ (supination)',           7, 4, '10-12',  false, 'Coudes fixes le long du corps, pas de balancement, descente contrôlée',                                    'main'),
+  (d_lundi, 'Rowing haltère unilatéral',           8, 3, '12',     false, 'Appui genou + main sur le banc, dos neutre, amplitude complète, squeeze en haut',                           'main'),
   (d_lundi, 'Curl haltères hammer',                9, 3, '10-12',  false, 'Prise neutre, mouvement lent, squeeze en haut — travaille le brachial et l''avant-bras',                  'main'),
   (d_lundi, 'Curl haltère concentré',             10, 2, '12-15',  false, 'Coude calé sur intérieur de cuisse, contraction max en haut, 2s de hold — connexion neuromusculaire',     'main'),
   (d_lundi, 'Suspension barre fixe',              11, 2, '30s',    true,  'Décompression vertébrale, relâchement complet, genoux pliés si besoin',                                   'cooldown');
@@ -102,8 +102,7 @@ insert into exercises (program_day_id, name, order_index, sets_target, reps_targ
   (d_vendredi, 'Élévations latérales haltères',           6, 3, '12-15', false, 'Jamais au-dessus de l''horizontale',               'main'),
   (d_vendredi, 'Extensions triceps barre EZ',             7, 4, '10-12', false, 'Coudes fixes pointés plafond',                     'main'),
   (d_vendredi, 'Kickbacks haltères',                      8, 3, '12-15', false, 'Finisher triceps, serrer en extension',            'main'),
-  (d_vendredi, 'Dead bug',                                 9, 3, '10/côté', true, 'Allongé sur le dos, allonger bras et jambe opposés en expirant, lombaires plaquées au sol, retour lent — gainage profond, protège les lombaires', 'main'),
-  (d_vendredi, 'Suspension barre fixe',                  10, 2, '30s',    true,  'Décompression vertébrale, relâchement complet, genoux pliés si besoin', 'cooldown');
+  (d_vendredi, 'Suspension barre fixe',                   9, 2, '30s',    true,  'Décompression vertébrale, relâchement complet, genoux pliés si besoin', 'cooldown');
 
 insert into cardio_blocks (program_day_id, name, duration_minutes, order_index, notes) values
   (d_vendredi, 'Corde à sauter ou Tapis', 25, 1, null);
