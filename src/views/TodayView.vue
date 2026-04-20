@@ -178,7 +178,7 @@ watch(mobilityDone, done => { if (done) open.value.mobility = false })
         <button class="section-header" @click="toggle('mobility')">
           <div class="section-left">
             <span class="section-label mobility">🌿 MOBILITÉ</span>
-            <span class="section-sub">~13 min</span>
+            <span class="section-sub">Récupération active</span>
             <span v-if="mobilityDone" class="section-check">✓</span>
           </div>
           <span class="section-chevron" :class="{ open: open.mobility }">›</span>
@@ -201,7 +201,7 @@ watch(mobilityDone, done => { if (done) open.value.mobility = false })
       <div v-if="rehabExercises.length" class="section">
         <button class="section-header" @click="toggle('rehab')">
           <div class="section-left">
-            <span class="section-label rehab">🔧 REHAB</span>
+            <span class="section-label rehab">🔧 PRÉVENTION</span>
             <span class="section-sub">Avant séance</span>
             <span v-if="rehabDone" class="section-check">✓</span>
           </div>
@@ -221,7 +221,7 @@ watch(mobilityDone, done => { if (done) open.value.mobility = false })
       <div v-if="mainExercises.length" class="section">
         <button class="section-header" @click="toggle('main')">
           <div class="section-left">
-            <span class="section-label main">⚡ MAIN</span>
+            <span class="section-label main">⚡ MUSCU</span>
             <span v-if="mainDone" class="section-check">✓</span>
           </div>
           <span class="section-chevron" :class="{ open: open.main }">›</span>
@@ -240,7 +240,7 @@ watch(mobilityDone, done => { if (done) open.value.mobility = false })
       <div v-if="cooldownExercises.length" class="section">
         <button class="section-header" @click="toggle('cooldown')">
           <div class="section-left">
-            <span class="section-label cooldown">🧘 COOLDOWN</span>
+            <span class="section-label cooldown">🧘 RÉCUP</span>
             <span class="section-sub">Après séance</span>
             <span v-if="cooldownDone" class="section-check">✓</span>
           </div>
@@ -260,7 +260,7 @@ watch(mobilityDone, done => { if (done) open.value.mobility = false })
       <div v-if="cardioBlocks.length" class="section">
         <button class="section-header" @click="toggle('cardio')">
           <div class="section-left">
-            <span class="section-label cardio">🏃 CARDIO FIN</span>
+            <span class="section-label cardio">🏃 CARDIO</span>
           </div>
           <span class="section-chevron" :class="{ open: open.cardio }">›</span>
         </button>
