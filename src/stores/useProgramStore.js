@@ -34,7 +34,8 @@ export const useProgramStore = defineStore('program', () => {
     const rehab    = todayExercises.value.filter(e => e.section === 'rehab')
     const main     = todayExercises.value.filter(e => e.section === 'main')
     const cooldown = todayExercises.value.filter(e => e.section === 'cooldown')
-    return { rehab, main, cooldown }
+    const mobility = todayExercises.value.filter(e => e.section === 'mobility')
+    return { rehab, main, cooldown, mobility }
   })
 
   async function fetchActiveProgram() {

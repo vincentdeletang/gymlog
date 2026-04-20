@@ -38,6 +38,7 @@ const isCardio = computed(() => dayType.value === 'cardio')
 const rehabExercises    = computed(() => programStore.exercisesBySection.rehab)
 const mainExercises     = computed(() => programStore.exercisesBySection.main)
 const cooldownExercises = computed(() => programStore.exercisesBySection.cooldown)
+const mobilityExercises = computed(() => programStore.exercisesBySection.mobility)
 const cardioBlocks      = computed(() => programStore.todayCardioBlocks)
 
 const sessionComplete = computed(() => workoutStore.currentSession?.completed ?? false)
@@ -47,7 +48,7 @@ const canFinish = computed(() =>
 )
 
 const setsProgress = computed(() => {
-  const allExercises = [...rehabExercises.value, ...mainExercises.value, ...cooldownExercises.value]
+  const allExercises = [...rehabExercises.value, ...mainExercises.value, ...cooldownExercises.value, ...mobilityExercises.value]
   const total = allExercises.reduce((sum, ex) => sum + ex.sets_target, 0)
   const done  = allExercises.reduce((sum, ex) =>
     sum + Array.from({ length: ex.sets_target }, (_, i) => i + 1)
@@ -57,15 +58,15 @@ const setsProgress = computed(() => {
 
 onMounted(async () => {
   await programStore.fetchActiveProgram()
-  if (programStore.todayProgramDay && !isRestDay.value) {
+  if (programStore.todayProgramDay && (!isRestDay.value || programStore.todayExercises.length > 0)) {
     await workoutStore.startOrResumeSession(programStore.todayProgramDay.id)
   }
   loading.value = false
 })
 
 async function openSetModal({ exercise, setNumber }) {
-  // Rehab/cooldown = tap to toggle, no modal needed
-  if (exercise.section === 'rehab' || exercise.section === 'cooldown') {
+  // Rehab/cooldown/mobility = tap to toggle, no modal needed
+  if (['rehab', 'cooldown', 'mobility'].includes(exercise.section)) {
     const already = workoutStore.isSetLogged(exercise.id, setNumber)
     if (!already) {
       await workoutStore.logSet({ exerciseId: exercise.id, setNumber, weightKg: null, repsDone: null, rir: null })
@@ -116,7 +117,7 @@ const WARNING_STREAK = 7
 const streakWarning = computed(() => userStore.streak >= WARNING_STREAK)
 
 // Accordion state
-const open = ref({ rehab: true, main: true, cooldown: true, cardio: true })
+const open = ref({ rehab: true, main: true, cooldown: true, mobility: true, cardio: true })
 function toggle(section) { open.value[section] = !open.value[section] }
 
 function isSectionDone(exercises) {
@@ -130,11 +131,12 @@ function isSectionDone(exercises) {
 const rehabDone    = computed(() => isSectionDone(rehabExercises.value))
 const mainDone     = computed(() => isSectionDone(mainExercises.value))
 const cooldownDone = computed(() => isSectionDone(cooldownExercises.value))
+const mobilityDone = computed(() => isSectionDone(mobilityExercises.value))
 
-// Auto-collapse when section is fully done
 watch(rehabDone,    done => { if (done) open.value.rehab    = false })
 watch(mainDone,     done => { if (done) open.value.main     = false })
 watch(cooldownDone, done => { if (done) open.value.cooldown = false })
+watch(mobilityDone, done => { if (done) open.value.mobility = false })
 </script>
 
 <template>
@@ -165,17 +167,30 @@ watch(cooldownDone, done => { if (done) open.value.cooldown = false })
 
     <!-- Rest day -->
     <div v-if="isRestDay" class="rest-day">
-      <div class="rest-icon">😴</div>
-      <h2>Jour de repos</h2>
+      <div class="rest-icon">{{ mobilityExercises.length ? '🌿' : '😴' }}</div>
+      <h2>{{ mobilityExercises.length ? 'Récupération active' : 'Jour de repos' }}</h2>
       <p>Récupération = progression. Profites-en !</p>
-      <div v-if="cardioBlocks.length" class="rest-cardio">
-        <p class="section-label">Optionnel :</p>
-        <CardioBlock
-          v-for="(block, i) in cardioBlocks"
-          :key="block.id"
-          :block="block"
-          :index="i"
-        />
+    </div>
+
+    <!-- Mobility section (rest day) -->
+    <div v-if="isRestDay && mobilityExercises.length" class="session-content">
+      <div class="section">
+        <button class="section-header" @click="toggle('mobility')">
+          <div class="section-left">
+            <span class="section-label mobility">🌿 MOBILITÉ</span>
+            <span class="section-sub">~13 min</span>
+            <span v-if="mobilityDone" class="section-check">✓</span>
+          </div>
+          <span class="section-chevron" :class="{ open: open.mobility }">›</span>
+        </button>
+        <div v-show="open.mobility" class="section-body">
+          <ExerciseRow
+            v-for="ex in mobilityExercises"
+            :key="ex.id"
+            :exercise="ex"
+            @openSet="openSetModal"
+          />
+        </div>
       </div>
     </div>
 
@@ -287,7 +302,7 @@ watch(cooldownDone, done => { if (done) open.value.cooldown = false })
     </div>
 
     <!-- Finish button -->
-    <div v-if="!isRestDay && !loading" class="finish-zone">
+    <div v-if="!loading && !!workoutStore.currentSession" class="finish-zone">
       <div v-if="sessionComplete" class="already-done">
         ✓ Séance terminée
       </div>
@@ -297,7 +312,7 @@ watch(cooldownDone, done => { if (done) open.value.cooldown = false })
         :disabled="!canFinish"
         @click="finishSession"
       >
-        TERMINER
+        {{ isRestDay ? 'TERMINER LA RÉCUP' : 'TERMINER' }}
         <span class="xp-preview">
           {{ setsProgress.done }}/{{ setsProgress.total }} séries
           · +{{ programStore.todayProgramDay?.xp_reward ?? 0 }} XP
@@ -495,6 +510,7 @@ watch(cooldownDone, done => { if (done) open.value.cooldown = false })
 .section-label.main     { color: #3b82f6; }
 .section-label.cardio   { color: #10b981; }
 .section-label.cooldown { color: #8b5cf6; }
+.section-label.mobility { color: #06b6d4; }
 
 .section-sub {
   font-size: 12px;

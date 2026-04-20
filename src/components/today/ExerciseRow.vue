@@ -31,6 +31,7 @@ const SECTION_BADGE = {
   main:     { label: 'MAIN',     color: '#3b82f6' },
   cardio:   { label: 'CARDIO',   color: '#10b981' },
   cooldown: { label: 'COOLDOWN', color: '#8b5cf6' },
+  mobility: { label: 'MOBILITÉ', color: '#06b6d4' },
 }
 </script>
 
