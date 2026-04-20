@@ -199,11 +199,10 @@ insert into cardio_blocks (program_day_id, name, duration_minutes, order_index, 
 
 -- Mercredi — Lower Body
 insert into exercises (program_day_id, name, order_index, sets_target, reps_target, is_bodyweight, notes, section) values
-  (d_mercredi, 'Fentes marchées haltères',   1, 4, '10/jambe', false, null,                                  'main'),
-  (d_mercredi, 'Split squat bulgare',         2, 3, '10/jambe', false, null,                                  'main'),
-  (d_mercredi, 'Hip thrust (barre sur banc)', 3, 3, '12-15',    false, 'Squeeze fessiers 2s en haut',         'main'),
-  (d_mercredi, 'Mollets debout (barre)',      4, 4, '15-20',    false, 'Monter sur disque pour amplitude',    'main'),
-  (d_mercredi, 'Reverse crunches',            5, 3, '15-20',    true,  null,                                  'main');
+  (d_mercredi, 'Fentes marchées haltères',                 1, 4, '10/jambe', false, 'Pas suffisamment large pour que le genou avant ne dépasse pas le pied, descente selon confort', 'main'),
+  (d_mercredi, 'Soulevé de terre jambes tendues (barre)',  2, 3, '10-12',    false, 'Dos plat, descente contrôlée le long des jambes, étirement ischio en bas',                      'main'),
+  (d_mercredi, 'Mollets debout (barre)',                   3, 4, '15-20',    false, 'Monter sur disque pour amplitude',                                                               'main'),
+  (d_mercredi, 'Reverse crunches',                         4, 3, '15-20',    true,  null,                                                                                              'main');
 
 insert into cardio_blocks (program_day_id, name, duration_minutes, order_index, notes) values
   (d_mercredi, 'Tapis 3%', 30, 1, 'FC cible 110-130 bpm');
@@ -299,13 +298,55 @@ END $$;
 
 ---
 
+## 5. Migration 004 — Nouveau programme Mercredi
+
+> À lancer si la BDD est déjà initialisée avec l'ancien programme (Split squat + Hip thrust).
+
+```sql
+DO $$
+DECLARE
+  day_id     UUID;
+  bar_droite UUID;
+BEGIN
+  SELECT pd.id INTO day_id
+  FROM program_days pd
+  JOIN programs p ON p.id = pd.program_id
+  WHERE p.is_active = true AND pd.day_of_week = 3;
+
+  SELECT id INTO bar_droite FROM bars WHERE name = 'Barre droite';
+
+  DELETE FROM exercises
+  WHERE program_day_id = day_id
+    AND name IN ('Split squat bulgare', 'Hip thrust (barre sur banc)');
+
+  UPDATE exercises SET
+    order_index = 1,
+    notes = 'Pas suffisamment large pour que le genou avant ne dépasse pas le pied, descente selon confort'
+  WHERE program_day_id = day_id AND name = 'Fentes marchées haltères';
+
+  INSERT INTO exercises
+    (program_day_id, name, order_index, sets_target, reps_target, is_bodyweight, notes, section, bar_id)
+  VALUES
+    (day_id, 'Soulevé de terre jambes tendues (barre)', 2, 3, '10-12', false,
+     'Dos plat, descente contrôlée le long des jambes, étirement ischio en bas', 'main', bar_droite);
+
+  UPDATE exercises SET order_index = 3
+  WHERE program_day_id = day_id AND name = 'Mollets debout (barre)';
+
+  UPDATE exercises SET order_index = 4
+  WHERE program_day_id = day_id AND name = 'Reverse crunches';
+END $$;
+```
+
+---
+
 ## Récap — ce qui est auto-assigné
 
 | Exercice | Barre |
 |---|---|
 | Curl barre EZ (supination) | Barre EZ (6kg) |
 | Extensions triceps barre EZ | Barre EZ (6kg) |
-| Hip thrust (barre sur banc) | Barre droite (10kg) |
+| Soulevé de terre jambes tendues (barre) | Barre droite (10kg) |
 | Mollets debout (barre) | Barre droite (10kg) |
 | Rowing haltère unilatéral | Haltère (2.5kg) |
 | Curl haltères hammer | Haltère (2.5kg) |
@@ -314,4 +355,3 @@ END $$;
 | Développé haltères neutre | Haltère (2.5kg) |
 | Élévations latérales haltères | Haltère (2.5kg) |
 | Kickbacks haltères | Haltère (2.5kg) |
-| **Split squat bulgare** | **— (à assigner manuellement dans Réglages)** |

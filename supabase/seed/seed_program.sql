@@ -67,11 +67,10 @@ insert into cardio_blocks (program_day_id, name, duration_minutes, order_index, 
 -- MERCREDI — Lower Body
 -- ============================================================
 insert into exercises (program_day_id, name, order_index, sets_target, reps_target, is_bodyweight, notes, section) values
-  (d_mercredi, 'Fentes marchées haltères',  1, 4, '10/jambe', false, null,                                   'main'),
-  (d_mercredi, 'Split squat bulgare',        2, 3, '10/jambe', false, null,                                   'main'),
-  (d_mercredi, 'Hip thrust (barre sur banc)',3, 3, '12-15',    false, 'Squeeze fessiers 2s en haut',          'main'),
-  (d_mercredi, 'Mollets debout (barre)',     4, 4, '15-20',    false, 'Monter sur disque pour amplitude',     'main'),
-  (d_mercredi, 'Reverse crunches',           5, 3, '15-20',    true,  null,                                   'main');
+  (d_mercredi, 'Fentes marchées haltères',                  1, 4, '10/jambe', false, 'Pas suffisamment large pour que le genou avant ne dépasse pas le pied, descente selon confort', 'main'),
+  (d_mercredi, 'Soulevé de terre jambes tendues (barre)',   2, 3, '10-12',    false, 'Dos plat, descente contrôlée le long des jambes, étirement ischio en bas',                      'main'),
+  (d_mercredi, 'Mollets debout (barre)',                    3, 4, '15-20',    false, 'Monter sur disque pour amplitude',                                                               'main'),
+  (d_mercredi, 'Reverse crunches',                          4, 3, '15-20',    true,  null,                                                                                              'main');
 
 insert into cardio_blocks (program_day_id, name, duration_minutes, order_index, notes) values
   (d_mercredi, 'Tapis 3%', 30, 1, 'FC cible 110-130 bpm');
