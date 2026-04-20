@@ -459,7 +459,7 @@ END $$;
 
 ---
 
-## 9. Migration 008 — Dead bug mercredi (activation avant SDT)
+## 9. Migration 008 — Dead bug mercredi + suppression Reverse crunches
 
 ```sql
 DO $$
@@ -471,9 +471,19 @@ BEGIN
   WHERE p.is_active = true AND pd.day_of_week = 3;
 
   INSERT INTO exercises (program_day_id, name, order_index, sets_target, reps_target, is_bodyweight, notes, section)
-  VALUES (d_mercredi, 'Dead bug', 0, 2, '8/côté', true,
+  SELECT d_mercredi, 'Dead bug', 0, 2, '8/côté', true,
     'Activation lombaires avant le travail lourd — allonger bras et jambe opposés en expirant, lombaires plaquées au sol, retour lent',
-    'main');
+    'main'
+  WHERE NOT EXISTS (
+    SELECT 1 FROM exercises WHERE program_day_id=d_mercredi AND name='Dead bug'
+  );
+
+  DELETE FROM set_logs
+  WHERE exercise_id IN (
+    SELECT id FROM exercises WHERE program_day_id=d_mercredi AND name='Reverse crunches'
+  );
+
+  DELETE FROM exercises WHERE program_day_id=d_mercredi AND name='Reverse crunches';
 END $$;
 ```
 
