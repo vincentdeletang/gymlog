@@ -4,6 +4,7 @@ import LevelBar from '@/components/shared/LevelBar.vue'
 import ExerciseRow from '@/components/today/ExerciseRow.vue'
 import SetLogModal from '@/components/today/SetLogModal.vue'
 import CardioBlock from '@/components/today/CardioBlock.vue'
+import BoxingTimer from '@/components/today/BoxingTimer.vue'
 import CelebrationOverlay from '@/components/today/CelebrationOverlay.vue'
 import { useProgramStore } from '@/stores/useProgramStore'
 import { useWorkoutStore } from '@/stores/useWorkoutStore'
@@ -265,12 +266,10 @@ watch(mobilityDone, done => { if (done) open.value.mobility = false })
           <span class="section-chevron" :class="{ open: open.cardio }">›</span>
         </button>
         <div v-show="open.cardio" class="section-body">
-          <CardioBlock
-            v-for="(block, i) in cardioBlocks"
-            :key="block.id"
-            :block="block"
-            :index="i"
-          />
+          <template v-for="(block, i) in cardioBlocks" :key="block.id">
+            <BoxingTimer v-if="block.name === 'Sac de boxe'" :block="block" :index="i" />
+            <CardioBlock v-else :block="block" :index="i" />
+          </template>
         </div>
       </div>
     </div>
@@ -285,12 +284,10 @@ watch(mobilityDone, done => { if (done) open.value.mobility = false })
           <span class="section-chevron" :class="{ open: open.cardio }">›</span>
         </button>
         <div v-show="open.cardio" class="section-body">
-          <CardioBlock
-            v-for="(block, i) in cardioBlocks"
-            :key="block.id"
-            :block="block"
-            :index="i"
-          />
+          <template v-for="(block, i) in cardioBlocks" :key="block.id">
+            <BoxingTimer v-if="block.name === 'Sac de boxe'" :block="block" :index="i" />
+            <CardioBlock v-else :block="block" :index="i" />
+          </template>
         </div>
       </div>
     </div>
