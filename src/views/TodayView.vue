@@ -311,8 +311,7 @@ watch(mobilityDone, done => { if (done) open.value.mobility = false })
       >
         {{ isRestDay ? 'TERMINER LA RÉCUP' : 'TERMINER' }}
         <span class="xp-preview">
-          {{ setsProgress.done }}/{{ setsProgress.total }} séries
-          · +{{ programStore.todayProgramDay?.xp_reward ?? 0 }} XP
+          <template v-if="!isCardio">{{ setsProgress.done }}/{{ setsProgress.total }} séries · </template>+{{ programStore.todayProgramDay?.xp_reward ?? 0 }} XP
         </span>
       </button>
     </div>

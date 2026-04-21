@@ -139,25 +139,27 @@ export const useWorkoutStore = defineStore('workout', () => {
   }
 
   async function completeSession(xpReward) {
-    if (!currentSession.value) return
+    if (!currentSession.value) return false
     const userStore = useUserStore()
     const today = new Date().toISOString().slice(0, 10)
+    const completedAt = new Date().toISOString()
 
-    const { error } = await supabase
+    // Optimistic local update — show celebration immediately
+    currentSession.value = { ...currentSession.value, completed: true, completed_at: completedAt }
+    await userStore.addXP(xpReward)
+    await userStore.updateStreak(today)
+
+    // Sync to Supabase in background
+    supabase
       .from('workout_sessions')
-      .update({ completed: true, completed_at: new Date().toISOString() })
+      .update({ completed: true, completed_at: completedAt })
       .eq('id', currentSession.value.id)
+      .then(({ error }) => {
+        if (error) console.error('Session sync failed, will retry on next load', error)
+      })
 
-    if (!error) {
-      currentSession.value = { ...currentSession.value, completed: true }
-      await userStore.addXP(xpReward)
-      await userStore.updateStreak(today)
-    }
-
-    // Try to sync any pending offline logs
     syncPendingLogs()
-
-    return !error
+    return true
   }
 
   function getSetLog(exerciseId, setNumber) {
