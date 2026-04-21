@@ -61,8 +61,7 @@ insert into cardio_blocks (program_day_id, name, duration_minutes, order_index, 
 -- MARDI — Cardio Boxe
 -- ============================================================
 insert into cardio_blocks (program_day_id, name, duration_minutes, order_index, notes) values
-  (d_mardi, 'Music Boxing', 15, 1, 'Échauffement, montée progressive'),
-  (d_mardi, 'Sac de boxe',  25, 2, 'Rounds 3 min / 1 min récup');
+  (d_mardi, 'Sac de boxe', 25, 1, 'Rounds 3 min / 1 min récup');
 
 -- ============================================================
 -- MERCREDI — Lower Body
