@@ -55,7 +55,7 @@ insert into exercises (program_day_id, name, order_index, sets_target, reps_targ
 
 -- CARDIO FIN
 insert into cardio_blocks (program_day_id, name, duration_minutes, order_index, notes) values
-  (d_lundi, 'Corde à sauter', 20, 1, 'Séries 2-3 min / 30s récup');
+  (d_lundi, 'Tapis incliné', 20, 1, 'Pente 8-12%, FC cible 110-130 bpm, torse droit');
 
 -- ============================================================
 -- MARDI — Cardio Boxe
@@ -103,7 +103,7 @@ insert into exercises (program_day_id, name, order_index, sets_target, reps_targ
   (d_vendredi, 'Suspension barre fixe',                   9, 2, '30s',    true, 'Décompression vertébrale, relâchement complet, genoux pliés si besoin', 'cooldown');
 
 insert into cardio_blocks (program_day_id, name, duration_minutes, order_index, notes) values
-  (d_vendredi, 'Corde à sauter ou Tapis', 25, 1, null);
+  (d_vendredi, 'Tapis incliné', 25, 1, 'Pente 8-12%, FC cible 110-130 bpm, torse droit');
 
 -- ============================================================
 -- SAMEDI — Récupération active (mobilité ~13 min)

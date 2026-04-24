@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { supabase } from '@/lib/supabase'
-import { queueSetLog, syncPendingLogs } from '@/lib/offlineQueue'
+import { queueSetLog, syncPendingLogs, pushSetLog, getPendingLogs } from '@/lib/offlineQueue'
 import { useUserStore } from './useUserStore'
 
 export const useWorkoutStore = defineStore('workout', () => {
@@ -36,7 +36,9 @@ export const useWorkoutStore = defineStore('workout', () => {
       currentSession.value = created
     }
 
+    await syncPendingLogs()
     await loadSetLogs()
+    await mergePendingIntoMemory()
     await loadPreviousData(programDayId)
     return currentSession.value
   }
@@ -48,6 +50,20 @@ export const useWorkoutStore = defineStore('workout', () => {
       .select('*')
       .eq('session_id', currentSession.value.id)
     setLogs.value = data ?? []
+  }
+
+  async function mergePendingIntoMemory() {
+    if (!currentSession.value) return
+    const pending = await getPendingLogs()
+    for (const p of pending) {
+      if (p.session_id !== currentSession.value.id) continue
+      const { _pending, ...data } = p
+      const idx = setLogs.value.findIndex(
+        l => l.exercise_id === data.exercise_id && l.set_number === data.set_number
+      )
+      if (idx >= 0) setLogs.value.splice(idx, 1, data)
+      else setLogs.value.push(data)
+    }
   }
 
   async function loadPreviousData(programDayId) {
@@ -93,6 +109,7 @@ export const useWorkoutStore = defineStore('workout', () => {
     )
 
     const payload = {
+      id: existing?.id ?? crypto.randomUUID(),
       session_id: currentSession.value.id,
       exercise_id: exerciseId,
       set_number: setNumber,
@@ -103,39 +120,18 @@ export const useWorkoutStore = defineStore('workout', () => {
     }
 
     if (existing) {
-      payload.id = existing.id
-    } else {
-      payload.id = crypto.randomUUID()
-    }
-
-    // Optimistic local update
-    if (existing) {
       const idx = setLogs.value.indexOf(existing)
       setLogs.value.splice(idx, 1, { ...existing, ...payload })
     } else {
       setLogs.value.push(payload)
     }
 
-    // Try Supabase — update vs insert to avoid upsert ambiguity
-    try {
-      let error
-      if (existing) {
-        ;({ error } = await supabase
-          .from('set_logs')
-          .update({
-            weight_kg: payload.weight_kg,
-            reps_done: payload.reps_done,
-            rir: payload.rir,
-            logged_at: payload.logged_at,
-          })
-          .eq('id', existing.id))
-      } else {
-        ;({ error } = await supabase.from('set_logs').insert(payload))
-      }
-      if (error) throw error
-    } catch {
-      await queueSetLog(payload)
-    }
+    // Always persist to IndexedDB first — durable even if tab is frozen mid-sync
+    await queueSetLog(payload)
+
+    // Background sync with timeout — do NOT await: UI must respond instantly
+    // even when mobile networks or frozen sockets would otherwise hang forever
+    pushSetLog(payload).catch(() => { /* stays queued, retried on resume/online */ })
   }
 
   async function completeSession(xpReward) {
