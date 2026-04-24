@@ -683,3 +683,24 @@ BEGIN
    WHERE program_day_id=d_vendredi AND name='Corde à sauter ou Tapis';
 END $$;
 ```
+
+---
+
+## 16. Migration 015 — Suspension barre fixe assistée
+
+> À 136kg le dead hang pur est limité par le grip avant que l'étirement vertébral soit vraiment profitable. Pieds en soutien (sol ou genoux sur banc) déchargent 40-60% du poids → tu tiens 30s propres et la traction spinale est réelle. Épaules engagées légèrement (scapular hang) pour protéger la gauche.
+
+```sql
+DO $$
+BEGIN
+  UPDATE exercises
+     SET notes='Pieds au sol ou genoux en appui sur un banc pour décharger le grip. Corps relâché, suspension depuis les épaules (scapular hang léger, pas dead hang passif). 30s continus.'
+   WHERE name='Suspension barre fixe'
+     AND section='cooldown'
+     AND program_day_id IN (
+       SELECT pd.id FROM program_days pd
+       JOIN programs p ON p.id=pd.program_id
+       WHERE p.is_active=true AND pd.day_of_week IN (1, 3, 5)
+     );
+END $$;
+```

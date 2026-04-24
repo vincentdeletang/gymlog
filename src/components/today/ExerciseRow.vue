@@ -3,6 +3,7 @@ import { computed } from 'vue'
 import SetButton from './SetButton.vue'
 import { useWorkoutStore } from '@/stores/useWorkoutStore'
 import { suggestedWeight } from '@/lib/progression'
+import { isTimed as isTimedTarget } from '@/lib/parseTarget'
 
 const props = defineProps({
   exercise: Object,
@@ -19,6 +20,8 @@ const sets = computed(() =>
 const allLogged = computed(() =>
   sets.value.every(s => workoutStore.isSetLogged(props.exercise.id, s))
 )
+
+const timed = computed(() => isTimedTarget(props.exercise.reps_target))
 
 const suggestion = computed(() => {
   if (props.exercise.is_bodyweight || props.exercise.section === 'rehab') return null
@@ -63,6 +66,7 @@ const SECTION_BADGE = {
         :set-number="s"
         :log="workoutStore.getSetLog(exercise.id, s)"
         :is-bodyweight="exercise.is_bodyweight"
+        :is-timed="timed"
         @click="emit('openSet', { exercise, setNumber: s })"
       />
     </div>

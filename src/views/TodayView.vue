@@ -6,10 +6,12 @@ import SetLogModal from '@/components/today/SetLogModal.vue'
 import CardioBlock from '@/components/today/CardioBlock.vue'
 import BoxingTimer from '@/components/today/BoxingTimer.vue'
 import CelebrationOverlay from '@/components/today/CelebrationOverlay.vue'
+import ExerciseTimer from '@/components/today/ExerciseTimer.vue'
 import { useProgramStore } from '@/stores/useProgramStore'
 import { useWorkoutStore } from '@/stores/useWorkoutStore'
 import { useUserStore } from '@/stores/useUserStore'
 import { useAudio } from '@/composables/useAudio'
+import { parseTimeTarget } from '@/lib/parseTarget'
 
 const programStore = useProgramStore()
 const workoutStore = useWorkoutStore()
@@ -25,6 +27,12 @@ const earnedStreak = ref(0)
 const modalOpen = ref(false)
 const modalExercise = ref(null)
 const modalSetNumber = ref(null)
+
+// Timer overlay state
+const timerOpen = ref(false)
+const timerExercise = ref(null)
+const timerSetNumber = ref(null)
+const timerTarget = ref(null) // { min, max, isRange }
 
 const todayDay = computed(() => {
   const days = ['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi']
@@ -66,18 +74,42 @@ onMounted(async () => {
 })
 
 async function openSetModal({ exercise, setNumber }) {
-  // Rehab/cooldown/mobility = tap to toggle, no modal needed
-  if (['rehab', 'cooldown', 'mobility'].includes(exercise.section)) {
-    const already = workoutStore.isSetLogged(exercise.id, setNumber)
-    if (!already) {
-      await workoutStore.logSet({ exerciseId: exercise.id, setNumber, weightKg: null, repsDone: null, rir: null })
-      playSuccess()
-    }
+  if (workoutStore.isSetLogged(exercise.id, setNumber)) return
+
+  const timeTarget = parseTimeTarget(exercise.reps_target)
+  if (timeTarget) {
+    timerExercise.value = exercise
+    timerSetNumber.value = setNumber
+    timerTarget.value = timeTarget
+    timerOpen.value = true
     return
   }
+
+  // Rehab/cooldown/mobility = tap to log (no modal, no timer)
+  if (['rehab', 'cooldown', 'mobility'].includes(exercise.section)) {
+    await workoutStore.logSet({ exerciseId: exercise.id, setNumber, weightKg: null, repsDone: null, rir: null })
+    playSuccess()
+    return
+  }
+
   modalExercise.value = exercise
   modalSetNumber.value = setNumber
   modalOpen.value = true
+}
+
+async function onTimerStop({ seconds }) {
+  await workoutStore.logSet({
+    exerciseId: timerExercise.value.id,
+    setNumber: timerSetNumber.value,
+    weightKg: null,
+    repsDone: seconds,
+    rir: null,
+  })
+  timerOpen.value = false
+}
+
+function onTimerCancel() {
+  timerOpen.value = false
 }
 
 // Pre-fill from the most recent logged set of same exercise in current session
@@ -329,6 +361,18 @@ watch(mobilityDone, done => { if (done) open.value.mobility = false })
       :previous-log="workoutStore.getPreviousSet(modalExercise?.id, modalSetNumber)"
       @close="modalOpen = false"
       @save="saveSet"
+    />
+
+    <!-- Exercise timer overlay -->
+    <ExerciseTimer
+      v-if="timerOpen"
+      :exercise="timerExercise"
+      :set-number="timerSetNumber"
+      :target-seconds="timerTarget.min"
+      :target-max="timerTarget.max"
+      :is-range="timerTarget.isRange"
+      @stop="onTimerStop"
+      @cancel="onTimerCancel"
     />
 
     <!-- Celebration overlay -->
