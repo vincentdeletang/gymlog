@@ -7,6 +7,7 @@ import { useUserStore } from './useUserStore'
 export const useWorkoutStore = defineStore('workout', () => {
   const currentSession = ref(null)
   const setLogs = ref([]) // set_logs for current session, keyed by exercise_id+set_number
+  const cardioLogs = ref([]) // cardio_block_logs for current session
   const loading = ref(false)
 
   // Previous session data per exercise (for "last time" hint in modal)
@@ -39,8 +40,52 @@ export const useWorkoutStore = defineStore('workout', () => {
     await syncPendingLogs()
     await loadSetLogs()
     await mergePendingIntoMemory()
+    await loadCardioLogs()
     await loadPreviousData(programDayId)
     return currentSession.value
+  }
+
+  async function loadCardioLogs() {
+    if (!currentSession.value) return
+    const { data } = await supabase
+      .from('cardio_block_logs')
+      .select('*')
+      .eq('session_id', currentSession.value.id)
+    cardioLogs.value = data ?? []
+  }
+
+  function isCardioDone(blockId) {
+    return cardioLogs.value.some(l => l.cardio_block_id === blockId)
+  }
+
+  function markCardioDone(blockId) {
+    if (!currentSession.value || isCardioDone(blockId)) return
+    const payload = {
+      id: crypto.randomUUID(),
+      session_id: currentSession.value.id,
+      cardio_block_id: blockId,
+      completed_at: new Date().toISOString(),
+    }
+    cardioLogs.value.push(payload)
+
+    const controller = new AbortController()
+    setTimeout(() => controller.abort(), 8000)
+    supabase.from('cardio_block_logs').insert(payload).abortSignal(controller.signal)
+      .then(({ error }) => { if (error) console.warn('cardio mark sync failed', error) })
+      .catch(() => {})
+  }
+
+  function unmarkCardioDone(blockId) {
+    if (!currentSession.value) return
+    const log = cardioLogs.value.find(l => l.cardio_block_id === blockId)
+    if (!log) return
+    cardioLogs.value = cardioLogs.value.filter(l => l.cardio_block_id !== blockId)
+
+    const controller = new AbortController()
+    setTimeout(() => controller.abort(), 8000)
+    supabase.from('cardio_block_logs').delete().eq('id', log.id).abortSignal(controller.signal)
+      .then(({ error }) => { if (error) console.warn('cardio unmark sync failed', error) })
+      .catch(() => {})
   }
 
   async function loadSetLogs() {
@@ -193,6 +238,21 @@ export const useWorkoutStore = defineStore('workout', () => {
     return data ?? []
   }
 
+  async function fetchSessionCardio(session) {
+    if (!session?.program_day_id) return []
+    const { data: blocks } = await supabase
+      .from('cardio_blocks')
+      .select('*')
+      .eq('program_day_id', session.program_day_id)
+      .order('order_index')
+    const { data: logs } = await supabase
+      .from('cardio_block_logs')
+      .select('cardio_block_id')
+      .eq('session_id', session.id)
+    const done = new Set((logs ?? []).map(l => l.cardio_block_id))
+    return (blocks ?? []).map(b => ({ ...b, completed: done.has(b.id) }))
+  }
+
   // Stats helpers
   async function fetchWeightProgress(exerciseId, weeks = 8) {
     const userStore = useUserStore()
@@ -245,10 +305,11 @@ export const useWorkoutStore = defineStore('workout', () => {
   }
 
   return {
-    currentSession, setLogs, loading, previousSets,
+    currentSession, setLogs, cardioLogs, loading, previousSets,
     startOrResumeSession, loadSetLogs, logSet,
     completeSession, getSetLog, isSetLogged, getPreviousSet,
-    fetchHistory, fetchSessionDetail,
+    isCardioDone, markCardioDone, unmarkCardioDone,
+    fetchHistory, fetchSessionDetail, fetchSessionCardio,
     fetchWeightProgress, fetchWeeklyVolume, fetchRIRStats,
   }
 })

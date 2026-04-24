@@ -299,7 +299,7 @@ watch(mobilityDone, done => { if (done) open.value.mobility = false })
         </button>
         <div v-show="open.cardio" class="section-body">
           <template v-for="(block, i) in cardioBlocks" :key="block.id">
-            <BoxingTimer v-if="block.name === 'Sac de boxe'" :block="block" :index="i" />
+            <BoxingTimer v-if="block.name === 'Sac de boxe'" :block="block" :index="i" @done="workoutStore.markCardioDone(block.id)" />
             <CardioBlock v-else :block="block" :index="i" />
           </template>
         </div>
@@ -317,7 +317,7 @@ watch(mobilityDone, done => { if (done) open.value.mobility = false })
         </button>
         <div v-show="open.cardio" class="section-body">
           <template v-for="(block, i) in cardioBlocks" :key="block.id">
-            <BoxingTimer v-if="block.name === 'Sac de boxe'" :block="block" :index="i" />
+            <BoxingTimer v-if="block.name === 'Sac de boxe'" :block="block" :index="i" @done="workoutStore.markCardioDone(block.id)" />
             <CardioBlock v-else :block="block" :index="i" />
           </template>
         </div>

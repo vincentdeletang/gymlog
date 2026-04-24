@@ -7,6 +7,7 @@ const workoutStore = useWorkoutStore()
 const sessions = ref([])
 const selectedSession = ref(null)
 const sessionDetail = ref([])
+const sessionCardio = ref([])
 const loadingDetail = ref(false)
 
 onMounted(async () => {
@@ -51,7 +52,12 @@ const grouped = computed(() => {
 async function openDetail(session) {
   selectedSession.value = session
   loadingDetail.value = true
-  sessionDetail.value = await workoutStore.fetchSessionDetail(session.id)
+  const [detail, cardio] = await Promise.all([
+    workoutStore.fetchSessionDetail(session.id),
+    workoutStore.fetchSessionCardio(session),
+  ])
+  sessionDetail.value = detail
+  sessionCardio.value = cardio
   loadingDetail.value = false
 }
 
@@ -158,8 +164,29 @@ const groupedDetail = computed(() => {
           <div v-if="!logs.length" class="empty-section">—</div>
         </div>
 
-        <div v-if="!sessionDetail.length" class="empty-state">
-          Aucun set enregistré pour cette séance.
+        <div
+          v-if="sessionCardio.length"
+          class="detail-section"
+        >
+          <div class="detail-section-label">CARDIO</div>
+          <div
+            v-for="block in sessionCardio"
+            :key="block.id"
+            class="log-row cardio-row"
+            :class="{ done: block.completed }"
+          >
+            <span class="log-name">{{ block.name }}</span>
+            <div class="log-data">
+              <span class="cardio-duration">{{ block.duration_minutes }} min</span>
+              <span :class="block.completed ? 'cardio-check' : 'cardio-miss'">
+                {{ block.completed ? '✓ Fait' : '– Non loggé' }}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div v-if="!sessionDetail.length && !sessionCardio.length" class="empty-state">
+          Aucune activité enregistrée pour cette séance.
         </div>
       </div>
     </div>
@@ -367,6 +394,11 @@ const groupedDetail = computed(() => {
 .log-reps   { font-family: 'Barlow Condensed', sans-serif; font-size: 15px; font-weight: 700; color: #f9fafb; }
 .log-rir    { font-size: 11px; color: #9ca3af; }
 .log-set    { font-size: 11px; color: #6b7280; background: #1f2937; padding: 2px 6px; border-radius: 4px; }
+
+.cardio-row.done { border-left: 3px solid #10b981; }
+.cardio-duration { font-family: 'Barlow Condensed', sans-serif; font-size: 14px; font-weight: 700; color: #f59e0b; }
+.cardio-check { font-size: 12px; font-weight: 700; color: #10b981; background: rgba(16,185,129,0.1); padding: 2px 8px; border-radius: 10px; }
+.cardio-miss  { font-size: 12px; font-weight: 700; color: #6b7280; background: rgba(107,114,128,0.1); padding: 2px 8px; border-radius: 10px; }
 
 .empty-section { color: #4b5563; font-size: 13px; padding: 4px 12px; }
 </style>

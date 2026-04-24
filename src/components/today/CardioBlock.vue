@@ -1,13 +1,19 @@
 <script setup>
-import { ref } from 'vue'
+import { computed } from 'vue'
+import { useWorkoutStore } from '@/stores/useWorkoutStore'
 
-defineProps({
+const props = defineProps({
   block: Object,
   index: Number,
 })
 
-const done = ref(false)
-function toggleDone() { done.value = !done.value }
+const workoutStore = useWorkoutStore()
+const done = computed(() => workoutStore.isCardioDone(props.block.id))
+
+function toggleDone() {
+  if (done.value) workoutStore.unmarkCardioDone(props.block.id)
+  else workoutStore.markCardioDone(props.block.id)
+}
 </script>
 
 <template>
