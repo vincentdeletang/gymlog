@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { supabase } from '@/lib/supabase'
+import { todayISO, dayOfWeekFromISO } from '@/lib/formatDate'
 
 export const useProgramStore = defineStore('program', () => {
   const activeProgram = ref(null)
@@ -10,31 +11,37 @@ export const useProgramStore = defineStore('program', () => {
   const bars = ref([])
   const loading = ref(false)
 
-  const todayDay = computed(() => new Date().getDay()) // 0=Sun..6=Sat
+  const activeDate = ref(todayISO())
 
-  const todayProgramDay = computed(() =>
-    programDays.value.find(d => d.day_of_week === todayDay.value) ?? null
+  function setActiveDate(d) {
+    activeDate.value = d ?? todayISO()
+  }
+
+  const activeDay = computed(() => dayOfWeekFromISO(activeDate.value))
+
+  const activeProgramDay = computed(() =>
+    programDays.value.find(d => d.day_of_week === activeDay.value) ?? null
   )
 
-  const todayExercises = computed(() => {
-    if (!todayProgramDay.value) return []
+  const activeExercises = computed(() => {
+    if (!activeProgramDay.value) return []
     return exercises.value
-      .filter(e => e.program_day_id === todayProgramDay.value.id)
+      .filter(e => e.program_day_id === activeProgramDay.value.id)
       .sort((a, b) => a.order_index - b.order_index)
   })
 
-  const todayCardioBlocks = computed(() => {
-    if (!todayProgramDay.value) return []
+  const activeCardioBlocks = computed(() => {
+    if (!activeProgramDay.value) return []
     return cardioBlocks.value
-      .filter(b => b.program_day_id === todayProgramDay.value.id)
+      .filter(b => b.program_day_id === activeProgramDay.value.id)
       .sort((a, b) => a.order_index - b.order_index)
   })
 
   const exercisesBySection = computed(() => {
-    const rehab    = todayExercises.value.filter(e => e.section === 'rehab')
-    const main     = todayExercises.value.filter(e => e.section === 'main')
-    const cooldown = todayExercises.value.filter(e => e.section === 'cooldown')
-    const mobility = todayExercises.value.filter(e => e.section === 'mobility')
+    const rehab    = activeExercises.value.filter(e => e.section === 'rehab')
+    const main     = activeExercises.value.filter(e => e.section === 'main')
+    const cooldown = activeExercises.value.filter(e => e.section === 'cooldown')
+    const mobility = activeExercises.value.filter(e => e.section === 'mobility')
     return { rehab, main, cooldown, mobility }
   })
 
@@ -110,7 +117,8 @@ export const useProgramStore = defineStore('program', () => {
 
   return {
     activeProgram, programDays, exercises, cardioBlocks, bars, loading,
-    todayDay, todayProgramDay, todayExercises, todayCardioBlocks, exercisesBySection,
+    activeDate, setActiveDate,
+    activeDay, activeProgramDay, activeExercises, activeCardioBlocks, exercisesBySection,
     fetchActiveProgram, getProgramDayById, getExercisesForDay, getCardioBlocksForDay,
     updateExerciseBar,
   }

@@ -10,7 +10,7 @@ const props = defineProps({
   previousLog: Object,   // last session hint (display only)
 })
 
-const emit = defineEmits(['close', 'save'])
+const emit = defineEmits(['close', 'save', 'delete'])
 
 const weightKg = ref('')
 const repsDone = ref('')
@@ -98,6 +98,10 @@ function save() {
     repsDone: parseInt(repsDone.value) || null,
     rir: rir.value,
   })
+}
+
+function confirmDelete() {
+  if (window.confirm('Supprimer cette série ?')) emit('delete')
 }
 </script>
 
@@ -194,7 +198,11 @@ function save() {
           </div>
 
           <button class="save-btn" @click="save">
-            Valider la série
+            {{ existingLog ? 'Mettre à jour' : 'Valider la série' }}
+          </button>
+
+          <button v-if="existingLog" class="delete-btn" @click="confirmDelete">
+            🗑 Supprimer cette série
           </button>
         </div>
       </div>
@@ -402,5 +410,24 @@ function save() {
 .save-btn:active {
   background: #2563eb;
   transform: scale(0.98);
+}
+
+.delete-btn {
+  background: transparent;
+  color: #ef4444;
+  border: 1px solid rgba(239,68,68,0.3);
+  border-radius: 12px;
+  padding: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  width: 100%;
+  min-height: 44px;
+  margin-top: 4px;
+  transition: background 0.15s;
+}
+
+.delete-btn:active {
+  background: rgba(239,68,68,0.08);
 }
 </style>

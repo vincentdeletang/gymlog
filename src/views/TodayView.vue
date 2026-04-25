@@ -1,5 +1,6 @@
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import LevelBar from '@/components/shared/LevelBar.vue'
 import ExerciseRow from '@/components/today/ExerciseRow.vue'
 import SetLogModal from '@/components/today/SetLogModal.vue'
@@ -7,12 +8,16 @@ import CardioBlock from '@/components/today/CardioBlock.vue'
 import BoxingTimer from '@/components/today/BoxingTimer.vue'
 import CelebrationOverlay from '@/components/today/CelebrationOverlay.vue'
 import ExerciseTimer from '@/components/today/ExerciseTimer.vue'
+import TimerInputModal from '@/components/today/TimerInputModal.vue'
 import { useProgramStore } from '@/stores/useProgramStore'
 import { useWorkoutStore } from '@/stores/useWorkoutStore'
 import { useUserStore } from '@/stores/useUserStore'
 import { useAudio } from '@/composables/useAudio'
 import { parseTimeTarget } from '@/lib/parseTarget'
+import { todayISO, dayOfWeekFromISO, formatLongDate, formatShortDate } from '@/lib/formatDate'
 
+const route = useRoute()
+const router = useRouter()
 const programStore = useProgramStore()
 const workoutStore = useWorkoutStore()
 const userStore = useUserStore()
@@ -28,18 +33,27 @@ const modalOpen = ref(false)
 const modalExercise = ref(null)
 const modalSetNumber = ref(null)
 
-// Timer overlay state
+// Timer countdown overlay state
 const timerOpen = ref(false)
 const timerExercise = ref(null)
 const timerSetNumber = ref(null)
 const timerTarget = ref(null) // { min, max, isRange }
 
+// Timer input modal state (catch-up / edit mode for timed exos)
+const timerInputOpen = ref(false)
+const timerInputExercise = ref(null)
+const timerInputSetNumber = ref(null)
+const timerInputTarget = ref(null)
+
+const targetDate = computed(() => route.params.date || todayISO())
+const inCatchUpMode = computed(() => targetDate.value !== todayISO())
+
 const todayDay = computed(() => {
   const days = ['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi']
-  return days[new Date().getDay()]
+  return days[dayOfWeekFromISO(targetDate.value)]
 })
 
-const dayType = computed(() => programStore.todayProgramDay?.type ?? 'rest')
+const dayType = computed(() => programStore.activeProgramDay?.type ?? 'rest')
 const isRestDay = computed(() => dayType.value === 'rest')
 const isStrength = computed(() => dayType.value === 'strength')
 const isCardio = computed(() => dayType.value === 'cardio')
@@ -48,7 +62,7 @@ const rehabExercises    = computed(() => programStore.exercisesBySection.rehab)
 const mainExercises     = computed(() => programStore.exercisesBySection.main)
 const cooldownExercises = computed(() => programStore.exercisesBySection.cooldown)
 const mobilityExercises = computed(() => programStore.exercisesBySection.mobility)
-const cardioBlocks      = computed(() => programStore.todayCardioBlocks)
+const cardioBlocks      = computed(() => programStore.activeCardioBlocks)
 
 const sessionComplete = computed(() => workoutStore.currentSession?.completed ?? false)
 
@@ -65,33 +79,56 @@ const setsProgress = computed(() => {
   return { done, total }
 })
 
-onMounted(async () => {
+async function loadActiveSession() {
+  loading.value = true
+  programStore.setActiveDate(targetDate.value)
   await programStore.fetchActiveProgram()
-  if (programStore.todayProgramDay && (!isRestDay.value || programStore.todayExercises.length > 0)) {
-    await workoutStore.startOrResumeSession(programStore.todayProgramDay.id)
+  if (programStore.activeProgramDay && (!isRestDay.value || programStore.activeExercises.length > 0)) {
+    await workoutStore.startOrResumeSession(programStore.activeProgramDay.id, targetDate.value)
   }
   loading.value = false
+}
+
+onMounted(loadActiveSession)
+
+watch(() => route.params.date, (next, prev) => {
+  if (next === prev) return
+  loadActiveSession()
 })
 
 async function openSetModal({ exercise, setNumber }) {
-  if (workoutStore.isSetLogged(exercise.id, setNumber)) return
-
+  const isLogged = workoutStore.isSetLogged(exercise.id, setNumber)
+  const isTapToLog = ['rehab', 'cooldown', 'mobility'].includes(exercise.section)
   const timeTarget = parseTimeTarget(exercise.reps_target)
+
+  // Tap-to-log sections without time target: tap toggles log/unlog
+  if (isTapToLog && !timeTarget) {
+    if (isLogged) {
+      await workoutStore.deleteSetLog(exercise.id, setNumber)
+    } else {
+      await workoutStore.logSet({ exerciseId: exercise.id, setNumber, weightKg: null, repsDone: null, rir: null })
+      playSuccess()
+    }
+    return
+  }
+
+  // Timed exos: countdown timer for fresh logging today, input modal for edit or catch-up
   if (timeTarget) {
-    timerExercise.value = exercise
-    timerSetNumber.value = setNumber
-    timerTarget.value = timeTarget
-    timerOpen.value = true
+    if (isLogged || inCatchUpMode.value) {
+      timerInputExercise.value = exercise
+      timerInputSetNumber.value = setNumber
+      timerInputTarget.value = timeTarget
+      timerInputOpen.value = true
+    } else {
+      timerExercise.value = exercise
+      timerSetNumber.value = setNumber
+      timerTarget.value = timeTarget
+      timerOpen.value = true
+    }
     return
   }
 
-  // Rehab/cooldown/mobility = tap to log (no modal, no timer)
-  if (['rehab', 'cooldown', 'mobility'].includes(exercise.section)) {
-    await workoutStore.logSet({ exerciseId: exercise.id, setNumber, weightKg: null, repsDone: null, rir: null })
-    playSuccess()
-    return
-  }
-
+  // Main weighted exos: full modal (handles both new and edit via existingLog prop)
   modalExercise.value = exercise
   modalSetNumber.value = setNumber
   modalOpen.value = true
@@ -110,6 +147,23 @@ async function onTimerStop({ seconds }) {
 
 function onTimerCancel() {
   timerOpen.value = false
+}
+
+async function onTimerInputSave({ seconds }) {
+  await workoutStore.logSet({
+    exerciseId: timerInputExercise.value.id,
+    setNumber: timerInputSetNumber.value,
+    weightKg: null,
+    repsDone: seconds,
+    rir: null,
+  })
+  playSuccess()
+  timerInputOpen.value = false
+}
+
+async function onTimerInputDelete() {
+  await workoutStore.deleteSetLog(timerInputExercise.value.id, timerInputSetNumber.value)
+  timerInputOpen.value = false
 }
 
 // Pre-fill from the most recent logged set of same exercise in current session
@@ -136,14 +190,23 @@ async function saveSet({ weightKg, repsDone, rir }) {
   modalOpen.value = false
 }
 
+async function deleteSet() {
+  await workoutStore.deleteSetLog(modalExercise.value.id, modalSetNumber.value)
+  modalOpen.value = false
+}
+
 async function finishSession() {
-  const xp = programStore.todayProgramDay?.xp_reward ?? 0
+  const xp = programStore.activeProgramDay?.xp_reward ?? 0
   const ok = await workoutStore.completeSession(xp)
   if (ok) {
     xpEarned.value = xp
     earnedStreak.value = userStore.streak
     celebrating.value = true
   }
+}
+
+function exitCatchUp() {
+  router.push('/today')
 }
 
 const WARNING_STREAK = 7
@@ -181,20 +244,26 @@ watch(mobilityDone, done => { if (done) open.value.mobility = false })
       <div class="day-title">
         <span class="day-name">{{ todayDay }}</span>
         <span
-          v-if="programStore.todayProgramDay"
+          v-if="programStore.activeProgramDay"
           class="day-type-badge"
           :class="dayType"
         >
           {{ dayType === 'strength' ? '💪 Muscu' : dayType === 'cardio' ? '🏃 Cardio' : '😴 Repos' }}
         </span>
       </div>
-      <div class="session-name" v-if="programStore.todayProgramDay">
-        {{ programStore.todayProgramDay.name }}
+      <div class="session-name" v-if="programStore.activeProgramDay">
+        {{ programStore.activeProgramDay.name }}
       </div>
     </div>
 
+    <!-- Catch-up banner -->
+    <div v-if="inCatchUpMode" class="catchup-banner">
+      <span>🎯 Mode rattrapage — séance du {{ formatLongDate(targetDate) }}</span>
+      <button class="catchup-back" @click="exitCatchUp">Aujourd'hui →</button>
+    </div>
+
     <!-- Streak warning -->
-    <div v-if="streakWarning" class="warning-banner">
+    <div v-if="streakWarning && !inCatchUpMode" class="warning-banner">
       ⚠️ {{ userStore.streak }} jours sans repos — pense à récupérer !
     </div>
 
@@ -341,9 +410,11 @@ watch(mobilityDone, done => { if (done) open.value.mobility = false })
         :disabled="!canFinish"
         @click="finishSession"
       >
-        {{ isRestDay ? 'TERMINER LA RÉCUP' : 'TERMINER' }}
+        <template v-if="inCatchUpMode">TERMINER LA SÉANCE DU {{ formatShortDate(targetDate).toUpperCase() }}</template>
+        <template v-else-if="isRestDay">TERMINER LA RÉCUP</template>
+        <template v-else>TERMINER</template>
         <span class="xp-preview">
-          <template v-if="!isCardio">{{ setsProgress.done }}/{{ setsProgress.total }} séries · </template>+{{ programStore.todayProgramDay?.xp_reward ?? 0 }} XP
+          <template v-if="!isCardio">{{ setsProgress.done }}/{{ setsProgress.total }} séries · </template>+{{ programStore.activeProgramDay?.xp_reward ?? 0 }} XP
         </span>
       </button>
     </div>
@@ -361,6 +432,7 @@ watch(mobilityDone, done => { if (done) open.value.mobility = false })
       :previous-log="workoutStore.getPreviousSet(modalExercise?.id, modalSetNumber)"
       @close="modalOpen = false"
       @save="saveSet"
+      @delete="deleteSet"
     />
 
     <!-- Exercise timer overlay -->
@@ -373,6 +445,20 @@ watch(mobilityDone, done => { if (done) open.value.mobility = false })
       :is-range="timerTarget.isRange"
       @stop="onTimerStop"
       @cancel="onTimerCancel"
+    />
+
+    <!-- Timer input modal (catch-up mode + edit mode for timed exos) -->
+    <TimerInputModal
+      v-if="timerInputOpen"
+      :exercise="timerInputExercise"
+      :set-number="timerInputSetNumber"
+      :target-seconds="timerInputTarget?.min"
+      :target-max="timerInputTarget?.max"
+      :is-range="timerInputTarget?.isRange"
+      :existing-log="workoutStore.getSetLog(timerInputExercise?.id, timerInputSetNumber)"
+      @close="timerInputOpen = false"
+      @save="onTimerInputSave"
+      @delete="onTimerInputDelete"
     />
 
     <!-- Celebration overlay -->
@@ -437,6 +523,43 @@ watch(mobilityDone, done => { if (done) open.value.mobility = false })
   padding: 10px 14px;
   font-size: 13px;
   color: #fbbf24;
+}
+
+.catchup-banner {
+  margin: 0 16px 12px;
+  background: rgba(245,158,11,0.12);
+  border: 1px solid rgba(245,158,11,0.35);
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-size: 13px;
+  color: #fbbf24;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.catchup-banner span {
+  flex: 1;
+  text-transform: capitalize;
+}
+
+.catchup-back {
+  background: transparent;
+  border: 1px solid rgba(245,158,11,0.5);
+  color: #fbbf24;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.catchup-back:active {
+  background: rgba(245,158,11,0.15);
 }
 
 .rest-day {

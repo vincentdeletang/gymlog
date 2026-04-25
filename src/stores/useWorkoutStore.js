@@ -1,8 +1,9 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { supabase } from '@/lib/supabase'
-import { queueSetLog, syncPendingLogs, pushSetLog, getPendingLogs } from '@/lib/offlineQueue'
+import { queueSetLog, syncPendingLogs, pushSetLog, getPendingLogs, removePendingLog } from '@/lib/offlineQueue'
 import { useUserStore } from './useUserStore'
+import { todayISO } from '@/lib/formatDate'
 
 export const useWorkoutStore = defineStore('workout', () => {
   const currentSession = ref(null)
@@ -13,17 +14,21 @@ export const useWorkoutStore = defineStore('workout', () => {
   // Previous session data per exercise (for "last time" hint in modal)
   const previousSets = ref({}) // { [exerciseId]: { [setNumber]: { weight_kg, reps_done, rir } } }
 
-  async function startOrResumeSession(programDayId) {
+  async function startOrResumeSession(programDayId, targetDate = todayISO()) {
     const userStore = useUserStore()
-    const today = new Date().toISOString().slice(0, 10)
 
-    // Check if a session already exists for today
+    // Clear state from any previous session so stale data doesn't flash during the swap
+    currentSession.value = null
+    setLogs.value = []
+    cardioLogs.value = []
+    previousSets.value = {}
+
     const { data: existing } = await supabase
       .from('workout_sessions')
       .select('*')
       .eq('user_id', userStore.user.id)
       .eq('program_day_id', programDayId)
-      .eq('session_date', today)
+      .eq('session_date', targetDate)
       .maybeSingle()
 
     if (existing) {
@@ -31,7 +36,7 @@ export const useWorkoutStore = defineStore('workout', () => {
     } else {
       const { data: created } = await supabase
         .from('workout_sessions')
-        .insert({ user_id: userStore.user.id, program_day_id: programDayId, session_date: today })
+        .insert({ user_id: userStore.user.id, program_day_id: programDayId, session_date: targetDate })
         .select()
         .single()
       currentSession.value = created
@@ -41,7 +46,7 @@ export const useWorkoutStore = defineStore('workout', () => {
     await loadSetLogs()
     await mergePendingIntoMemory()
     await loadCardioLogs()
-    await loadPreviousData(programDayId)
+    await loadPreviousData(programDayId, targetDate)
     return currentSession.value
   }
 
@@ -111,23 +116,25 @@ export const useWorkoutStore = defineStore('workout', () => {
     }
   }
 
-  async function loadPreviousData(programDayId) {
+  async function loadPreviousData(programDayId, targetDate = todayISO()) {
     const userStore = useUserStore()
-    const today = new Date().toISOString().slice(0, 10)
 
-    // Get the last completed session for the same program_day (not today)
+    // Last completed session for the same program_day, strictly before targetDate
     const { data: prevSession } = await supabase
       .from('workout_sessions')
       .select('id')
       .eq('user_id', userStore.user.id)
       .eq('program_day_id', programDayId)
       .eq('completed', true)
-      .lt('session_date', today)
+      .lt('session_date', targetDate)
       .order('session_date', { ascending: false })
       .limit(1)
       .maybeSingle()
 
-    if (!prevSession) return
+    if (!prevSession) {
+      previousSets.value = {}
+      return
+    }
 
     const { data: prevLogs } = await supabase
       .from('set_logs')
@@ -179,16 +186,41 @@ export const useWorkoutStore = defineStore('workout', () => {
     pushSetLog(payload).catch(() => { /* stays queued, retried on resume/online */ })
   }
 
+  async function deleteSetLog(exerciseId, setNumber) {
+    if (!currentSession.value) return
+    const entry = setLogs.value.find(
+      l => l.exercise_id === exerciseId && l.set_number === setNumber
+    )
+    if (!entry) return
+
+    setLogs.value = setLogs.value.filter(l => l.id !== entry.id)
+
+    // Pull from offline queue if it never made it out
+    try { await removePendingLog(entry.id) } catch { /* ignore */ }
+
+    // Best-effort delete from Supabase (no-op if it never synced)
+    const controller = new AbortController()
+    setTimeout(() => controller.abort(), 8000)
+    supabase.from('set_logs').delete().eq('id', entry.id).abortSignal(controller.signal)
+      .then(({ error }) => { if (error) console.warn('set delete sync failed', error) })
+      .catch(() => {})
+  }
+
   async function completeSession(xpReward) {
     if (!currentSession.value) return false
+    if (currentSession.value.completed) return false // already done — no double XP/streak
+
     const userStore = useUserStore()
-    const today = new Date().toISOString().slice(0, 10)
+    const sessionDate = currentSession.value.session_date
     const completedAt = new Date().toISOString()
+    const isCatchUp = sessionDate !== todayISO()
 
     // Optimistic local update — show celebration immediately
     currentSession.value = { ...currentSession.value, completed: true, completed_at: completedAt }
     await userStore.addXP(xpReward)
-    await userStore.updateStreak(today)
+    if (!isCatchUp) {
+      await userStore.updateStreak(sessionDate)
+    }
 
     // Sync to Supabase in background
     supabase
@@ -306,7 +338,7 @@ export const useWorkoutStore = defineStore('workout', () => {
 
   return {
     currentSession, setLogs, cardioLogs, loading, previousSets,
-    startOrResumeSession, loadSetLogs, logSet,
+    startOrResumeSession, loadSetLogs, logSet, deleteSetLog,
     completeSession, getSetLog, isSetLogged, getPreviousSet,
     isCardioDone, markCardioDone, unmarkCardioDone,
     fetchHistory, fetchSessionDetail, fetchSessionCardio,

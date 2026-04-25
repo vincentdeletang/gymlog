@@ -1,7 +1,10 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { useWorkoutStore } from '@/stores/useWorkoutStore'
+import { todayISO, formatLongDate } from '@/lib/formatDate'
 
+const router = useRouter()
 const workoutStore = useWorkoutStore()
 
 const sessions = ref([])
@@ -9,10 +12,21 @@ const selectedSession = ref(null)
 const sessionDetail = ref([])
 const sessionCardio = ref([])
 const loadingDetail = ref(false)
+const missedDate = ref('')
 
 onMounted(async () => {
   sessions.value = await workoutStore.fetchHistory(40)
 })
+
+function onMissedDateChange(value) {
+  if (!value) return
+  router.push(`/today/${value}`)
+}
+
+function editSession() {
+  if (!selectedSession.value?.session_date) return
+  router.push(`/today/${selectedSession.value.session_date}`)
+}
 
 const grouped = computed(() => {
   const now = new Date()
@@ -67,8 +81,7 @@ function displayWeight(log) {
 }
 
 function formatDate(dateStr) {
-  const d = new Date(dateStr)
-  return d.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })
+  return formatLongDate(dateStr)
 }
 
 const TYPE_ICON = { strength: '💪', cardio: '🏃', rest: '😴' }
@@ -91,6 +104,17 @@ const groupedDetail = computed(() => {
     </div>
 
     <div v-if="!selectedSession">
+      <div class="add-missed-zone">
+        <label class="add-missed-label">📆 Logger une séance passée</label>
+        <input
+          type="date"
+          :max="todayISO()"
+          v-model="missedDate"
+          @change="onMissedDateChange(missedDate)"
+          class="add-missed-input"
+        />
+      </div>
+
       <div v-for="group in grouped" :key="group.label" class="week-group">
         <div class="week-label">{{ group.label }}</div>
         <div
@@ -125,7 +149,10 @@ const groupedDetail = computed(() => {
 
     <!-- Session detail -->
     <div v-else class="session-detail">
-      <button class="back-btn" @click="selectedSession = null">← Retour</button>
+      <div class="detail-toolbar">
+        <button class="back-btn" @click="selectedSession = null">← Retour</button>
+        <button class="edit-session-btn" @click="editSession">✏️ Modifier</button>
+      </div>
 
       <div class="detail-header">
         <h2>{{ selectedSession.program_days?.name }}</h2>
@@ -211,6 +238,39 @@ const groupedDetail = computed(() => {
   text-transform: uppercase;
   letter-spacing: 1px;
 }
+
+.add-missed-zone {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 16px 14px;
+  border-bottom: 1px solid #111827;
+  margin-bottom: 8px;
+}
+
+.add-missed-label {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  color: #9ca3af;
+  letter-spacing: 0.5px;
+}
+
+.add-missed-input {
+  background: #1f2937;
+  border: 1px solid #374151;
+  border-radius: 8px;
+  color: #f9fafb;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 6px 10px;
+  outline: none;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.add-missed-input:focus { border-color: #3b82f6; }
 
 .week-group { margin-bottom: 16px; }
 
@@ -299,6 +359,13 @@ const groupedDetail = computed(() => {
 /* Detail */
 .session-detail { padding: 0 16px; }
 
+.detail-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
 .back-btn {
   background: transparent;
   border: none;
@@ -307,6 +374,24 @@ const groupedDetail = computed(() => {
   font-weight: 600;
   padding: 12px 0;
   cursor: pointer;
+}
+
+.edit-session-btn {
+  background: rgba(59,130,246,0.1);
+  border: 1px solid rgba(59,130,246,0.3);
+  border-radius: 8px;
+  color: #60a5fa;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  padding: 6px 12px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.edit-session-btn:active {
+  background: rgba(59,130,246,0.2);
 }
 
 .detail-header {
