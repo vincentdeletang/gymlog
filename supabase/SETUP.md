@@ -752,3 +752,19 @@ join cardio_blocks cb on cb.program_day_id = ws.program_day_id
 where ws.completed = true
 on conflict (session_id, cardio_block_id) do nothing;
 ```
+
+---
+
+## 19. Migration 018 — Policy UPDATE sur `exercises` + `cardio_blocks`
+
+> La migration 001 n'a créé qu'une policy SELECT sur ces tables. Du coup l'UPDATE depuis SettingsView (changement de barre) était silencieusement bloqué par RLS — pas d'erreur côté client, juste 0 ligne affectée. Cette migration ouvre l'UPDATE aux utilisateurs authentifiés (cohérent avec le SELECT existant, programme partagé sans `user_id`).
+
+```sql
+create policy "Authenticated users can update exercises"
+  on exercises for update to authenticated
+  using (true) with check (true);
+
+create policy "Authenticated users can update cardio_blocks"
+  on cardio_blocks for update to authenticated
+  using (true) with check (true);
+```
