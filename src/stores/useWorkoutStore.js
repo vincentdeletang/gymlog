@@ -354,6 +354,34 @@ export const useWorkoutStore = defineStore('workout', () => {
     return data ?? []
   }
 
+  async function fetchCurrentWeekVolumeByMuscle() {
+    const userStore = useUserStore()
+    // Monday of current week (week starts Monday)
+    const now = new Date()
+    const day = now.getDay()
+    const diff = now.getDate() - day + (day === 0 ? -6 : 1)
+    const monday = new Date(now)
+    monday.setHours(0, 0, 0, 0)
+    monday.setDate(diff)
+    const mondayISO = monday.toISOString().slice(0, 10)
+
+    const { data } = await supabase
+      .from('set_logs')
+      .select('id, reps_done, exercises!inner(muscle_group, section), workout_sessions!inner(user_id, session_date)')
+      .eq('workout_sessions.user_id', userStore.user.id)
+      .gte('workout_sessions.session_date', mondayISO)
+      .not('reps_done', 'is', null)
+
+    const counts = {}
+    for (const log of (data ?? [])) {
+      const mg = log.exercises?.muscle_group
+      if (!mg) continue
+      if (log.exercises?.section !== 'main') continue
+      counts[mg] = (counts[mg] ?? 0) + 1
+    }
+    return counts
+  }
+
   async function fetchWeeklyVolume(weeks = 8) {
     const userStore = useUserStore()
     const since = new Date()
@@ -366,6 +394,59 @@ export const useWorkoutStore = defineStore('workout', () => {
       .gte('session_date', since.toISOString().slice(0, 10))
       .order('session_date')
     return data ?? []
+  }
+
+  // Returns [{ exercise_id, exercise_name, avg_rir, count }] for exercises whose RIR average over the last N sessions is below threshold.
+  // Used to surface deload candidates: low RIR sustained = chronic high effort = fatigue accumulation.
+  async function fetchDeloadCandidates({ lastSessions = 3, threshold = 1, minSamples = 3 } = {}) {
+    const userStore = useUserStore()
+    const { data: sessions } = await supabase
+      .from('workout_sessions')
+      .select('id')
+      .eq('user_id', userStore.user.id)
+      .eq('completed', true)
+      .order('session_date', { ascending: false })
+      .limit(lastSessions)
+
+    if (!sessions?.length) return []
+    const sessionIds = sessions.map(s => s.id)
+
+    const { data: logs } = await supabase
+      .from('set_logs')
+      .select('exercise_id, rir, exercises(name, section, is_bodyweight)')
+      .in('session_id', sessionIds)
+      .not('rir', 'is', null)
+
+    const byExercise = {}
+    for (const log of (logs ?? [])) {
+      // Skip rehab/cooldown/mobility — those aren't supposed to be intensity-driven.
+      const section = log.exercises?.section
+      if (section && section !== 'main') continue
+      if (!byExercise[log.exercise_id]) {
+        byExercise[log.exercise_id] = {
+          exercise_id: log.exercise_id,
+          exercise_name: log.exercises?.name ?? '?',
+          rirs: [],
+        }
+      }
+      byExercise[log.exercise_id].rirs.push(log.rir)
+    }
+
+    const candidates = []
+    for (const ex of Object.values(byExercise)) {
+      if (ex.rirs.length < minSamples) continue
+      const avg = ex.rirs.reduce((s, r) => s + r, 0) / ex.rirs.length
+      if (avg < threshold) {
+        candidates.push({
+          exercise_id: ex.exercise_id,
+          exercise_name: ex.exercise_name,
+          avg_rir: Math.round(avg * 10) / 10,
+          count: ex.rirs.length,
+        })
+      }
+    }
+    candidates.sort((a, b) => a.avg_rir - b.avg_rir)
+    return candidates
   }
 
   async function fetchRIRStats(exerciseId, lastN = 4) {
@@ -397,5 +478,6 @@ export const useWorkoutStore = defineStore('workout', () => {
     checkAndRecordPR, epleyE1RM,
     fetchHistory, fetchSessionDetail, fetchSessionCardio,
     fetchWeightProgress, fetchWeeklyVolume, fetchRIRStats,
+    fetchCurrentWeekVolumeByMuscle, fetchDeloadCandidates,
   }
 })

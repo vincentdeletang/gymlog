@@ -11,6 +11,7 @@ import ExerciseTimer from '@/components/today/ExerciseTimer.vue'
 import TimerInputModal from '@/components/today/TimerInputModal.vue'
 import RestTimerBar from '@/components/today/RestTimerBar.vue'
 import PRFlash from '@/components/today/PRFlash.vue'
+import SorenessCheckin from '@/components/today/SorenessCheckin.vue'
 import { useProgramStore } from '@/stores/useProgramStore'
 import { useWorkoutStore } from '@/stores/useWorkoutStore'
 import { useUserStore } from '@/stores/useUserStore'
@@ -342,6 +343,9 @@ watch(mobilityDone, done => { if (done) open.value.mobility = false })
 
     <!-- Strength day -->
     <div v-else-if="isStrength" class="session-content">
+
+      <!-- Soreness check-in (shoulder rehab) -->
+      <SorenessCheckin v-if="!inCatchUpMode" body-part="shoulder_left" label="Épaule gauche" />
 
       <!-- REHAB section -->
       <div v-if="rehabExercises.length" class="section">

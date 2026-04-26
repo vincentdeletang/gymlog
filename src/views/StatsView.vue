@@ -3,6 +3,9 @@ import { ref, computed, onMounted } from 'vue'
 import WeekCalendar from '@/components/stats/WeekCalendar.vue'
 import StatCard from '@/components/stats/StatCard.vue'
 import ProgressChart from '@/components/stats/ProgressChart.vue'
+import BodyweightCard from '@/components/stats/BodyweightCard.vue'
+import WeeklyVolumeByMuscle from '@/components/stats/WeeklyVolumeByMuscle.vue'
+import DeloadAlert from '@/components/stats/DeloadAlert.vue'
 import { useUserStore } from '@/stores/useUserStore'
 import { useWorkoutStore } from '@/stores/useWorkoutStore'
 import { useProgramStore } from '@/stores/useProgramStore'
@@ -97,11 +100,6 @@ function getWeekNumber(d) {
   const onejan = new Date(d.getFullYear(), 0, 1)
   return Math.ceil((((d - onejan) / 86400000) + onejan.getDay() + 1) / 7)
 }
-
-const rirWarningExercises = computed(() => {
-  // Would need async RIR fetch per exercise — simplified here
-  return []
-})
 </script>
 
 <template>
@@ -110,10 +108,20 @@ const rirWarningExercises = computed(() => {
       <h1>Progression</h1>
     </div>
 
+    <!-- Deload alert (renders only if signals trigger) -->
+    <div class="section-block">
+      <DeloadAlert />
+    </div>
+
     <!-- Week calendar -->
     <div class="section-block">
       <div class="block-title">Cette semaine</div>
       <WeekCalendar :sessions="recentSessions" />
+    </div>
+
+    <!-- Bodyweight tracking -->
+    <div class="section-block">
+      <BodyweightCard />
     </div>
 
     <!-- Global stats -->
@@ -127,9 +135,14 @@ const rirWarningExercises = computed(() => {
       </div>
     </div>
 
-    <!-- Weekly volume chart -->
+    <!-- Weekly volume per muscle group -->
+    <div class="section-block">
+      <WeeklyVolumeByMuscle />
+    </div>
+
+    <!-- Weekly volume chart (sessions count over time) -->
     <div class="section-block" v-if="weeklyChartData.labels.length">
-      <div class="block-title">Volume hebdomadaire</div>
+      <div class="block-title">Séances / semaine</div>
       <ProgressChart
         type="bar"
         :labels="weeklyChartData.labels"

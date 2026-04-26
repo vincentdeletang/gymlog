@@ -768,3 +768,91 @@ create policy "Authenticated users can update cardio_blocks"
   on cardio_blocks for update to authenticated
   using (true) with check (true);
 ```
+
+---
+
+## 20. Migration 019 — Table `bodyweight_logs`
+
+> Tracking du poids corporel au fil du temps (graph dans Stats). Une entrée par jour max (upsert sur `user_id + log_date`).
+
+```sql
+create table if not exists bodyweight_logs (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  log_date date not null default current_date,
+  weight_kg decimal(5,1) not null check (weight_kg > 0 and weight_kg < 500),
+  notes text,
+  created_at timestamptz default now(),
+  unique (user_id, log_date)
+);
+
+create index if not exists idx_bodyweight_logs_user_date
+  on bodyweight_logs (user_id, log_date desc);
+
+alter table bodyweight_logs enable row level security;
+
+create policy "Users own their bodyweight_logs"
+  on bodyweight_logs for all to authenticated
+  using (user_id = auth.uid())
+  with check (user_id = auth.uid());
+```
+
+---
+
+## 21. Migration 020 — Table `soreness_logs`
+
+> Check-in douleur avant séance (épaule G prioritaire). `level` 0-3, une entrée par (jour, body_part).
+
+```sql
+create table if not exists soreness_logs (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  log_date date not null default current_date,
+  body_part text not null,
+  level int not null check (level between 0 and 3),
+  notes text,
+  created_at timestamptz default now(),
+  unique (user_id, log_date, body_part)
+);
+
+create index if not exists idx_soreness_logs_user_date
+  on soreness_logs (user_id, log_date desc);
+
+alter table soreness_logs enable row level security;
+
+create policy "Users own their soreness_logs"
+  on soreness_logs for all to authenticated
+  using (user_id = auth.uid())
+  with check (user_id = auth.uid());
+```
+
+---
+
+## 22. Migration 021 — Colonne `muscle_group` sur `exercises` + backfill
+
+> Permet le calcul du volume hebdomadaire par groupe musculaire. Backfill best-effort via `name ILIKE`. Si un exo te semble mal classé, fix-le manuellement dans la table `exercises`.
+
+```sql
+alter table exercises add column if not exists muscle_group text;
+
+update exercises set muscle_group = 'back'
+  where section = 'main' and (name ilike '%rowing%');
+
+update exercises set muscle_group = 'biceps'
+  where section = 'main' and name ilike 'curl%';
+
+update exercises set muscle_group = 'chest'
+  where section = 'main' and name ilike '%développé%';
+
+update exercises set muscle_group = 'triceps'
+  where section = 'main' and (name ilike '%triceps%' or name ilike '%kickback%');
+
+update exercises set muscle_group = 'quads'
+  where section = 'main' and (name ilike '%squat%' or name ilike '%fente%');
+
+update exercises set muscle_group = 'hamstrings'
+  where section = 'main' and name ilike '%soulevé de terre%';
+
+update exercises set muscle_group = 'core'
+  where section = 'main' and (name ilike '%plank%' or name ilike '%dead bug%');
+```
