@@ -59,7 +59,7 @@ export const useUserStore = defineStore('user', () => {
   async function sendMagicLink(email) {
     const { error } = await supabase.auth.signInWithOtp({
       email,
-      options: { emailRedirectTo: `${window.location.origin}/gymlog/` },
+      options: { emailRedirectTo: `${window.location.origin}${import.meta.env.BASE_URL}` },
     })
     return { error }
   }

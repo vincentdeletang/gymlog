@@ -4,6 +4,7 @@ import { useUserStore } from '@/stores/useUserStore'
 import { useWorkoutStore } from '@/stores/useWorkoutStore'
 import { useProgramStore } from '@/stores/useProgramStore'
 import { useRouter } from 'vue-router'
+import { getAvailablePlates, setAvailablePlates, parsePlatesString, DEFAULT_PLATES } from '@/lib/plateCalc'
 
 const userStore = useUserStore()
 const workoutStore = useWorkoutStore()
@@ -60,6 +61,27 @@ async function exportData() {
 async function signOut() {
   await userStore.signOut()
   router.push('/auth')
+}
+
+// Plate inventory (localStorage)
+const platesInput = ref(getAvailablePlates().join(', '))
+const platesSaved = ref(false)
+const platesError = ref(false)
+
+function savePlates() {
+  const parsed = parsePlatesString(platesInput.value)
+  if (!parsed) { platesError.value = true; return }
+  setAvailablePlates(parsed)
+  platesInput.value = parsed.join(', ')
+  platesError.value = false
+  platesSaved.value = true
+  setTimeout(() => { platesSaved.value = false }, 2000)
+}
+
+function resetPlates() {
+  setAvailablePlates(DEFAULT_PLATES)
+  platesInput.value = DEFAULT_PLATES.join(', ')
+  platesError.value = false
 }
 </script>
 
@@ -147,6 +169,32 @@ async function signOut() {
         </div>
       </div>
       <div v-else class="tare-note" style="margin-top: 8px; color: #4b5563">Aucun exercice chargé.</div>
+    </div>
+
+    <!-- Plate inventory -->
+    <div class="settings-section">
+      <div class="section-label">Disques disponibles</div>
+      <div class="tare-note">
+        Disques que tu possèdes (en kg, séparés par virgules). Sert au calcul de décomposition automatique pendant la séance.
+      </div>
+      <div class="plates-row">
+        <input
+          v-model="platesInput"
+          type="text"
+          inputmode="decimal"
+          placeholder="20, 15, 10, 5, 2.5, 1.25, 1"
+          class="plates-input"
+          :class="{ error: platesError }"
+          @keyup.enter="savePlates"
+          @input="platesError = false"
+        />
+        <button class="plates-save" @click="savePlates">
+          <span v-if="platesSaved">✓</span>
+          <span v-else>OK</span>
+        </button>
+      </div>
+      <button class="plates-reset" @click="resetPlates">Réinitialiser au défaut</button>
+      <div v-if="platesError" class="plates-err">Format invalide. Ex : 20, 15, 10, 5, 2.5, 1.25, 1</div>
     </div>
 
     <!-- Export section -->
@@ -357,6 +405,64 @@ async function signOut() {
   font-size: 12px;
   color: #3b82f6;
   width: 14px;
+}
+
+.plates-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.plates-input {
+  flex: 1;
+  background: #1f2937;
+  border: 1px solid #374151;
+  border-radius: 8px;
+  color: #f9fafb;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 15px;
+  font-weight: 600;
+  padding: 8px 12px;
+  outline: none;
+  letter-spacing: 0.3px;
+}
+
+.plates-input:focus { border-color: #3b82f6; }
+.plates-input.error { border-color: #ef4444; }
+
+.plates-save {
+  background: rgba(59,130,246,0.15);
+  border: 1px solid rgba(59,130,246,0.4);
+  color: #60a5fa;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  padding: 0 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  min-width: 50px;
+  transition: background 0.15s;
+}
+
+.plates-save:active { background: rgba(59,130,246,0.3); }
+
+.plates-reset {
+  margin-top: 6px;
+  background: transparent;
+  border: none;
+  color: #6b7280;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 4px 0;
+  text-decoration: underline;
+}
+
+.plates-err {
+  margin-top: 6px;
+  color: #ef4444;
+  font-size: 12px;
 }
 
 .app-info {
