@@ -25,6 +25,9 @@ const props = defineProps({
   labels: Array,
   datasets: Array,
   title: String,
+  yMin: Number,
+  yMax: Number,
+  yStep: Number,
 })
 
 const chartOptions = computed(() => ({
@@ -56,7 +59,13 @@ const chartOptions = computed(() => ({
     },
     y: {
       grid: { color: 'rgba(31,41,55,0.8)' },
-      ticks: { color: '#6b7280', font: { family: 'Barlow', size: 11 } },
+      ticks: {
+        color: '#6b7280',
+        font: { family: 'Barlow', size: 11 },
+        ...(props.yStep ? { stepSize: props.yStep } : {}),
+      },
+      ...(props.yMin != null ? { min: props.yMin } : {}),
+      ...(props.yMax != null ? { max: props.yMax } : {}),
     },
   } : undefined,
 }))

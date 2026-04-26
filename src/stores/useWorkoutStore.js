@@ -438,6 +438,38 @@ export const useWorkoutStore = defineStore('workout', () => {
     return data ?? []
   }
 
+  // Returns per-exercise all-time PR: { exercise_id, exercise_name, weight_kg, reps_done, e1rm, session_date, tare }
+  async function fetchAllTimePRs() {
+    const userStore = useUserStore()
+    const { data } = await supabase
+      .from('set_logs')
+      .select('exercise_id, weight_kg, reps_done, exercises(name, is_bodyweight, bars(weight_kg)), workout_sessions!inner(user_id, completed, session_date)')
+      .eq('workout_sessions.user_id', userStore.user.id)
+      .eq('workout_sessions.completed', true)
+      .not('weight_kg', 'is', null)
+      .not('reps_done', 'is', null)
+
+    const byExercise = {}
+    for (const log of (data ?? [])) {
+      if (log.exercises?.is_bodyweight) continue
+      const e = epleyE1RM(log.weight_kg, log.reps_done)
+      const tare = log.exercises?.bars?.weight_kg ?? 0
+      const current = byExercise[log.exercise_id]
+      if (!current || e > current.e1rm) {
+        byExercise[log.exercise_id] = {
+          exercise_id: log.exercise_id,
+          exercise_name: log.exercises?.name ?? '?',
+          weight_kg: log.weight_kg,
+          reps_done: log.reps_done,
+          e1rm: e,
+          session_date: log.workout_sessions?.session_date,
+          tare,
+        }
+      }
+    }
+    return Object.values(byExercise).sort((a, b) => b.e1rm - a.e1rm)
+  }
+
   async function fetchCurrentWeekVolumeByMuscle() {
     const userStore = useUserStore()
     // Monday of current week (week starts Monday)
@@ -562,6 +594,6 @@ export const useWorkoutStore = defineStore('workout', () => {
     checkAndRecordPR, epleyE1RM, computeSessionStats,
     fetchHistory, fetchSessionDetail, fetchSessionCardio,
     fetchWeightProgress, fetchWeeklyVolume, fetchRIRStats,
-    fetchCurrentWeekVolumeByMuscle, fetchDeloadCandidates,
+    fetchCurrentWeekVolumeByMuscle, fetchDeloadCandidates, fetchAllTimePRs,
   }
 })
