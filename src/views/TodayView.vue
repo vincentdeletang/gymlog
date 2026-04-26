@@ -9,6 +9,7 @@ import BoxingTimer from '@/components/today/BoxingTimer.vue'
 import CelebrationOverlay from '@/components/today/CelebrationOverlay.vue'
 import ExerciseTimer from '@/components/today/ExerciseTimer.vue'
 import TimerInputModal from '@/components/today/TimerInputModal.vue'
+import RestTimerBar from '@/components/today/RestTimerBar.vue'
 import { useProgramStore } from '@/stores/useProgramStore'
 import { useWorkoutStore } from '@/stores/useWorkoutStore'
 import { useUserStore } from '@/stores/useUserStore'
@@ -44,6 +45,26 @@ const timerInputOpen = ref(false)
 const timerInputExercise = ref(null)
 const timerInputSetNumber = ref(null)
 const timerInputTarget = ref(null)
+
+// Rest timer between sets — non-blocking bottom bar
+const REST_BY_SECTION = { main: 120, rehab: 30, cooldown: 45, mobility: 0, cardio: 0 }
+const SECTION_ACCENT = { main: '#3b82f6', rehab: '#f59e0b', cooldown: '#8b5cf6', mobility: '#06b6d4', cardio: '#10b981' }
+const restTimer = ref(null) // { duration, exerciseName, setNumber, accent, key }
+let restKey = 0
+function startRestTimer(exercise, setNumber) {
+  if (inCatchUpMode.value) return
+  const seconds = REST_BY_SECTION[exercise.section] ?? 0
+  if (!seconds) return
+  restKey++
+  restTimer.value = {
+    duration: seconds,
+    exerciseName: exercise.name,
+    setNumber,
+    accent: SECTION_ACCENT[exercise.section] ?? '#3b82f6',
+    key: restKey,
+  }
+}
+function dismissRestTimer() { restTimer.value = null }
 
 const targetDate = computed(() => route.params.date || todayISO())
 const inCatchUpMode = computed(() => targetDate.value !== todayISO())
@@ -81,6 +102,7 @@ const setsProgress = computed(() => {
 
 async function loadActiveSession() {
   loading.value = true
+  restTimer.value = null
   programStore.setActiveDate(targetDate.value)
   await programStore.fetchActiveProgram()
   if (programStore.activeProgramDay && (!isRestDay.value || programStore.activeExercises.length > 0)) {
@@ -108,6 +130,7 @@ async function openSetModal({ exercise, setNumber }) {
     } else {
       await workoutStore.logSet({ exerciseId: exercise.id, setNumber, weightKg: null, repsDone: null, rir: null })
       playSuccess()
+      startRestTimer(exercise, setNumber)
     }
     return
   }
@@ -135,14 +158,17 @@ async function openSetModal({ exercise, setNumber }) {
 }
 
 async function onTimerStop({ seconds }) {
+  const ex = timerExercise.value
+  const sn = timerSetNumber.value
   await workoutStore.logSet({
-    exerciseId: timerExercise.value.id,
-    setNumber: timerSetNumber.value,
+    exerciseId: ex.id,
+    setNumber: sn,
     weightKg: null,
     repsDone: seconds,
     rir: null,
   })
   timerOpen.value = false
+  startRestTimer(ex, sn)
 }
 
 function onTimerCancel() {
@@ -150,15 +176,19 @@ function onTimerCancel() {
 }
 
 async function onTimerInputSave({ seconds }) {
+  const ex = timerInputExercise.value
+  const sn = timerInputSetNumber.value
+  const wasLogged = workoutStore.isSetLogged(ex.id, sn)
   await workoutStore.logSet({
-    exerciseId: timerInputExercise.value.id,
-    setNumber: timerInputSetNumber.value,
+    exerciseId: ex.id,
+    setNumber: sn,
     weightKg: null,
     repsDone: seconds,
     rir: null,
   })
   playSuccess()
   timerInputOpen.value = false
+  if (!wasLogged) startRestTimer(ex, sn)
 }
 
 async function onTimerInputDelete() {
@@ -179,8 +209,10 @@ const modalSessionPrevSet = computed(() => {
 })
 
 async function saveSet({ weightKg, repsDone, rir }) {
+  const ex = modalExercise.value
+  const wasLogged = workoutStore.isSetLogged(ex.id, modalSetNumber.value)
   await workoutStore.logSet({
-    exerciseId: modalExercise.value.id,
+    exerciseId: ex.id,
     setNumber: modalSetNumber.value,
     weightKg,
     repsDone,
@@ -188,6 +220,7 @@ async function saveSet({ weightKg, repsDone, rir }) {
   })
   playSuccess()
   modalOpen.value = false
+  if (!wasLogged) startRestTimer(ex, modalSetNumber.value)
 }
 
 async function deleteSet() {
@@ -419,8 +452,8 @@ watch(mobilityDone, done => { if (done) open.value.mobility = false })
       </button>
     </div>
 
-    <!-- Spacer for bottom nav -->
-    <div style="height: 80px" />
+    <!-- Spacer for bottom nav (extra room when rest timer bar is visible) -->
+    <div :style="{ height: restTimer ? '160px' : '80px' }" />
 
     <!-- Set log modal -->
     <SetLogModal
@@ -467,6 +500,17 @@ watch(mobilityDone, done => { if (done) open.value.mobility = false })
       :xp-earned="xpEarned"
       :streak-count="earnedStreak"
       @close="celebrating = false"
+    />
+
+    <!-- Rest timer between sets -->
+    <RestTimerBar
+      v-if="restTimer"
+      :key="restTimer.key"
+      :duration-sec="restTimer.duration"
+      :exercise-name="restTimer.exerciseName"
+      :set-number="restTimer.setNumber"
+      :accent="restTimer.accent"
+      @dismiss="dismissRestTimer"
     />
   </div>
 </template>
