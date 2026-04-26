@@ -260,6 +260,17 @@ function exitCatchUp() {
   router.push('/today')
 }
 
+const sessionNotes = ref('')
+watch(() => workoutStore.currentSession?.id, () => {
+  sessionNotes.value = workoutStore.currentSession?.notes ?? ''
+})
+async function saveSessionNotes() {
+  const trimmed = sessionNotes.value.trim()
+  const current = workoutStore.currentSession?.notes ?? ''
+  if (trimmed === current) return
+  await workoutStore.updateSessionNotes(trimmed || null)
+}
+
 const WARNING_STREAK = 7
 const streakWarning = computed(() => userStore.streak >= WARNING_STREAK)
 
@@ -451,6 +462,23 @@ watch(mobilityDone, done => { if (done) open.value.mobility = false })
     <div v-if="loading" class="loading">
       <div class="spinner" />
       <p>Chargement...</p>
+    </div>
+
+    <!-- Session notes (always visible if there's an active session) -->
+    <div v-if="!loading && !!workoutStore.currentSession && !isRestDay" class="notes-zone">
+      <details class="notes-details" :open="!!workoutStore.currentSession?.notes">
+        <summary class="notes-summary">
+          📝 Notes de séance
+          <span v-if="workoutStore.currentSession?.notes" class="notes-dot" />
+        </summary>
+        <textarea
+          v-model="sessionNotes"
+          @blur="saveSessionNotes"
+          placeholder="Sommeil, énergie, sensations, ce qui a marché ou pas…"
+          class="notes-textarea"
+          rows="3"
+        />
+      </details>
     </div>
 
     <!-- Finish button -->
@@ -775,6 +803,56 @@ watch(mobilityDone, done => { if (done) open.value.mobility = false })
 }
 
 @keyframes spin { to { transform: rotate(360deg); } }
+
+.notes-zone {
+  padding: 4px 16px 0;
+}
+
+.notes-details {
+  background: #111827;
+  border: 1px solid #1f2937;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.notes-summary {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  color: #9ca3af;
+  letter-spacing: 0.5px;
+  padding: 10px 12px;
+  cursor: pointer;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.notes-summary::-webkit-details-marker { display: none; }
+.notes-summary::marker { content: ''; }
+
+.notes-dot {
+  width: 6px;
+  height: 6px;
+  background: #3b82f6;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.notes-textarea {
+  width: 100%;
+  background: #0a0e17;
+  border: none;
+  border-top: 1px solid #1f2937;
+  color: #f9fafb;
+  font-size: 14px;
+  font-family: inherit;
+  padding: 10px 12px;
+  outline: none;
+  resize: vertical;
+  box-sizing: border-box;
+}
 
 .finish-zone {
   padding: 16px;

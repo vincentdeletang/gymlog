@@ -224,6 +224,10 @@ const SECTION_LABELS = {
             <span class="ds-lbl">durée</span>
           </div>
         </div>
+
+        <div v-if="selectedSession.notes" class="detail-notes">
+          📝 {{ selectedSession.notes }}
+        </div>
       </div>
 
       <div v-if="loadingDetail" class="loading">
@@ -519,6 +523,18 @@ const SECTION_LABELS = {
   text-transform: uppercase;
   letter-spacing: 0.4px;
   font-weight: 600;
+}
+
+.detail-notes {
+  margin-top: 10px;
+  background: rgba(59,130,246,0.05);
+  border: 1px solid rgba(59,130,246,0.15);
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 13px;
+  color: #cbd5e1;
+  line-height: 1.5;
+  white-space: pre-wrap;
 }
 
 .loading {

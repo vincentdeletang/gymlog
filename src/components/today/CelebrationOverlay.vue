@@ -49,9 +49,17 @@ onMounted(() => {
             <div class="stat-val">{{ stats.tonnage.toLocaleString('fr-FR') }}</div>
             <div class="stat-lbl">kg de tonnage</div>
           </div>
-          <div class="stat-cell">
+          <div v-if="stats.setsDone > 0" class="stat-cell">
             <div class="stat-val">{{ stats.setsDone }}</div>
             <div class="stat-lbl">séries</div>
+          </div>
+          <div v-if="stats.cardioMinutesActual > 0" class="stat-cell">
+            <div class="stat-val">{{ stats.cardioMinutesActual }}</div>
+            <div class="stat-lbl">min cardio</div>
+          </div>
+          <div v-if="stats.cardioBlocksDone > 0 && stats.setsDone === 0" class="stat-cell">
+            <div class="stat-val">{{ stats.cardioBlocksDone }}</div>
+            <div class="stat-lbl">{{ stats.cardioBlocksDone > 1 ? 'blocs' : 'bloc' }}</div>
           </div>
           <div v-if="durationLabel" class="stat-cell">
             <div class="stat-val">{{ durationLabel }}</div>

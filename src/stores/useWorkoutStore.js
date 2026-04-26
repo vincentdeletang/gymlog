@@ -331,7 +331,7 @@ export const useWorkoutStore = defineStore('workout', () => {
   // so we can include bar tare in tonnage and filter to main-section work.
   function computeSessionStats(exercisesById) {
     const logs = setLogs.value
-    if (!logs.length) return null
+    const cardios = cardioLogs.value
 
     let tonnage = 0
     let rirSum = 0
@@ -358,13 +358,42 @@ export const useWorkoutStore = defineStore('workout', () => {
       }
     }
 
+    let cardioMinutes = 0
+    for (const c of cardios) {
+      if (c.duration_seconds) cardioMinutes += c.duration_seconds / 60
+      if (c.completed_at) {
+        const t = new Date(c.completed_at).getTime()
+        if (firstAt == null || t < firstAt) firstAt = t
+        if (lastAt == null  || t > lastAt)  lastAt = t
+      }
+    }
+
+    if (!logs.length && !cardios.length) return null
+
     return {
       setsDone: logs.length,
       tonnage: Math.round(tonnage),
       avgRir: rirCount > 0 ? Math.round((rirSum / rirCount) * 10) / 10 : null,
       durationSec: firstAt && lastAt ? Math.round((lastAt - firstAt) / 1000) : null,
       prCount: prFlashedExercises.value.size,
+      cardioBlocksDone: cardios.length,
+      cardioMinutesActual: Math.round(cardioMinutes),
     }
+  }
+
+  async function updateSessionNotes(notes) {
+    if (!currentSession.value) return false
+    const prev = currentSession.value.notes
+    currentSession.value = { ...currentSession.value, notes }
+    const { error } = await supabase
+      .from('workout_sessions')
+      .update({ notes })
+      .eq('id', currentSession.value.id)
+    if (error) {
+      currentSession.value = { ...currentSession.value, notes: prev }
+      return false
+    }
+    return true
   }
 
   // History
@@ -591,7 +620,7 @@ export const useWorkoutStore = defineStore('workout', () => {
     startOrResumeSession, loadSetLogs, logSet, deleteSetLog,
     completeSession, getSetLog, isSetLogged, getPreviousSet,
     isCardioDone, markCardioDone, unmarkCardioDone, getCardioLog,
-    checkAndRecordPR, epleyE1RM, computeSessionStats,
+    checkAndRecordPR, epleyE1RM, computeSessionStats, updateSessionNotes,
     fetchHistory, fetchSessionDetail, fetchSessionCardio,
     fetchWeightProgress, fetchWeeklyVolume, fetchRIRStats,
     fetchCurrentWeekVolumeByMuscle, fetchDeloadCandidates, fetchAllTimePRs,
