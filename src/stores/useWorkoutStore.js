@@ -14,6 +14,16 @@ export const useWorkoutStore = defineStore('workout', () => {
   // Previous session data per exercise (for "last time" hint in modal)
   const previousSets = ref({}) // { [exerciseId]: { [setNumber]: { weight_kg, reps_done, rir } } }
 
+  // Best e1RM per exercise across all completed sessions BEFORE this session — immutable during session
+  const priorBestE1RM = ref({}) // { [exerciseId]: number }
+  // Exercises that have already triggered a PR flash this session (avoid spam)
+  const prFlashedExercises = ref(new Set())
+
+  function epleyE1RM(weightKg, reps) {
+    if (!weightKg || !reps) return 0
+    return weightKg * (1 + reps / 30)
+  }
+
   async function startOrResumeSession(programDayId, targetDate = todayISO()) {
     const userStore = useUserStore()
 
@@ -22,6 +32,8 @@ export const useWorkoutStore = defineStore('workout', () => {
     setLogs.value = []
     cardioLogs.value = []
     previousSets.value = {}
+    priorBestE1RM.value = {}
+    prFlashedExercises.value = new Set()
 
     const { data: existing } = await supabase
       .from('workout_sessions')
@@ -47,7 +59,48 @@ export const useWorkoutStore = defineStore('workout', () => {
     await mergePendingIntoMemory()
     await loadCardioLogs()
     await loadPreviousData(programDayId, targetDate)
+    await loadPriorBestE1RM(targetDate)
+    prFlashedExercises.value = new Set()
     return currentSession.value
+  }
+
+  async function loadPriorBestE1RM(beforeDate) {
+    const userStore = useUserStore()
+    const { data } = await supabase
+      .from('set_logs')
+      .select('exercise_id, weight_kg, reps_done, workout_sessions!inner(user_id, completed, session_date)')
+      .eq('workout_sessions.user_id', userStore.user.id)
+      .eq('workout_sessions.completed', true)
+      .lt('workout_sessions.session_date', beforeDate)
+      .not('weight_kg', 'is', null)
+      .not('reps_done', 'is', null)
+
+    const map = {}
+    for (const log of (data ?? [])) {
+      const e = epleyE1RM(log.weight_kg, log.reps_done)
+      if (!map[log.exercise_id] || e > map[log.exercise_id]) {
+        map[log.exercise_id] = e
+      }
+    }
+    priorBestE1RM.value = map
+  }
+
+  // Returns PR payload only if (a) we have prior data for this exercise,
+  // (b) the new set beats it, (c) we haven't already flashed this exercise this session.
+  function checkAndRecordPR(exerciseId, weightKg, repsDone) {
+    if (!weightKg || !repsDone) return null
+    if (prFlashedExercises.value.has(exerciseId)) return null
+    const prev = priorBestE1RM.value[exerciseId]
+    if (!prev) return null
+    const newE1RM = epleyE1RM(weightKg, repsDone)
+    if (newE1RM <= prev) return null
+    prFlashedExercises.value = new Set([...prFlashedExercises.value, exerciseId])
+    return {
+      isPR: true,
+      prevBest: prev,
+      newE1RM,
+      deltaKg: Math.round((newE1RM - prev) * 10) / 10,
+    }
   }
 
   async function loadCardioLogs() {
@@ -337,10 +390,11 @@ export const useWorkoutStore = defineStore('workout', () => {
   }
 
   return {
-    currentSession, setLogs, cardioLogs, loading, previousSets,
+    currentSession, setLogs, cardioLogs, loading, previousSets, priorBestE1RM,
     startOrResumeSession, loadSetLogs, logSet, deleteSetLog,
     completeSession, getSetLog, isSetLogged, getPreviousSet,
     isCardioDone, markCardioDone, unmarkCardioDone,
+    checkAndRecordPR, epleyE1RM,
     fetchHistory, fetchSessionDetail, fetchSessionCardio,
     fetchWeightProgress, fetchWeeklyVolume, fetchRIRStats,
   }

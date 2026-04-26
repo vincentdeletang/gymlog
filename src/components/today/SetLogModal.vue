@@ -1,6 +1,7 @@
 <script setup>
 import { ref, computed, watch } from 'vue'
 import { parseRepsTarget } from '@/lib/progression'
+import { decomposeWeight, formatDecomposition } from '@/lib/plateCalc'
 
 const props = defineProps({
   exercise: Object,
@@ -54,6 +55,13 @@ const totalWeight = computed(() => {
   const tare = props.exercise?.bars?.weight_kg ?? 0
   if (!discs || !tare) return null
   return discs + tare
+})
+
+const plateBreakdown = computed(() => {
+  const discs = parseFloat(weightKg.value)
+  if (!discs || discs <= 0) return null
+  const decomp = decomposeWeight(discs)
+  return decomp ? formatDecomposition(decomp) : null
 })
 
 const progression = computed(() => {
@@ -153,6 +161,9 @@ function confirmDelete() {
               placeholder="Ex: 20"
               class="field-input"
             />
+            <div v-if="plateBreakdown" class="plates-hint">
+              <span class="plates-icon">⚖️</span> {{ plateBreakdown }} kg
+            </div>
             <div v-if="totalWeight" class="total-hint">→ {{ totalWeight }} kg charge totale</div>
           </div>
 
@@ -379,6 +390,26 @@ function confirmDelete() {
   font-weight: 700;
   color: #6b7280;
   letter-spacing: 0.3px;
+}
+
+.plates-hint {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  color: #60a5fa;
+  letter-spacing: 0.3px;
+  background: rgba(59,130,246,0.08);
+  border: 1px solid rgba(59,130,246,0.2);
+  border-radius: 6px;
+  padding: 4px 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  align-self: flex-start;
+}
+
+.plates-icon {
+  font-size: 13px;
 }
 
 .notes {

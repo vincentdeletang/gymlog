@@ -10,6 +10,7 @@ import CelebrationOverlay from '@/components/today/CelebrationOverlay.vue'
 import ExerciseTimer from '@/components/today/ExerciseTimer.vue'
 import TimerInputModal from '@/components/today/TimerInputModal.vue'
 import RestTimerBar from '@/components/today/RestTimerBar.vue'
+import PRFlash from '@/components/today/PRFlash.vue'
 import { useProgramStore } from '@/stores/useProgramStore'
 import { useWorkoutStore } from '@/stores/useWorkoutStore'
 import { useUserStore } from '@/stores/useUserStore'
@@ -65,6 +66,10 @@ function startRestTimer(exercise, setNumber) {
   }
 }
 function dismissRestTimer() { restTimer.value = null }
+
+// PR flash state
+const prFlash = ref(null) // { exerciseName, prevBest, newE1RM, deltaKg }
+function dismissPR() { prFlash.value = null }
 
 const targetDate = computed(() => route.params.date || todayISO())
 const inCatchUpMode = computed(() => targetDate.value !== todayISO())
@@ -220,7 +225,13 @@ async function saveSet({ weightKg, repsDone, rir }) {
   })
   playSuccess()
   modalOpen.value = false
-  if (!wasLogged) startRestTimer(ex, modalSetNumber.value)
+  if (!wasLogged) {
+    if (!inCatchUpMode.value && !ex.is_bodyweight) {
+      const pr = workoutStore.checkAndRecordPR(ex.id, weightKg, repsDone)
+      if (pr) prFlash.value = { exerciseName: ex.name, ...pr }
+    }
+    startRestTimer(ex, modalSetNumber.value)
+  }
 }
 
 async function deleteSet() {
@@ -511,6 +522,16 @@ watch(mobilityDone, done => { if (done) open.value.mobility = false })
       :set-number="restTimer.setNumber"
       :accent="restTimer.accent"
       @dismiss="dismissRestTimer"
+    />
+
+    <!-- PR flash -->
+    <PRFlash
+      v-if="prFlash"
+      :exerciseName="prFlash.exerciseName"
+      :prevBest="prFlash.prevBest"
+      :newE1RM="prFlash.newE1RM"
+      :deltaKg="prFlash.deltaKg"
+      @close="dismissPR"
     />
   </div>
 </template>
