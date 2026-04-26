@@ -302,6 +302,47 @@ export const useWorkoutStore = defineStore('workout', () => {
     return previousSets.value[exerciseId]?.[setNumber] ?? null
   }
 
+  // Aggregate stats for the current session — used by completion overlay & history detail.
+  // exercisesById should map exercise_id → { section, is_bodyweight, bars: { weight_kg } }
+  // so we can include bar tare in tonnage and filter to main-section work.
+  function computeSessionStats(exercisesById) {
+    const logs = setLogs.value
+    if (!logs.length) return null
+
+    let tonnage = 0
+    let rirSum = 0
+    let rirCount = 0
+    let firstAt = null
+    let lastAt = null
+
+    for (const log of logs) {
+      const ex = exercisesById?.[log.exercise_id]
+      const isMain = !ex || ex.section === 'main'
+
+      if (isMain && log.weight_kg != null && log.reps_done != null) {
+        const tare = ex?.bars?.weight_kg ?? 0
+        tonnage += (log.weight_kg + tare) * log.reps_done
+      }
+      if (isMain && log.rir != null) {
+        rirSum += log.rir
+        rirCount++
+      }
+      if (log.logged_at) {
+        const t = new Date(log.logged_at).getTime()
+        if (firstAt == null || t < firstAt) firstAt = t
+        if (lastAt == null  || t > lastAt)  lastAt = t
+      }
+    }
+
+    return {
+      setsDone: logs.length,
+      tonnage: Math.round(tonnage),
+      avgRir: rirCount > 0 ? Math.round((rirSum / rirCount) * 10) / 10 : null,
+      durationSec: firstAt && lastAt ? Math.round((lastAt - firstAt) / 1000) : null,
+      prCount: prFlashedExercises.value.size,
+    }
+  }
+
   // History
   async function fetchHistory(limit = 20) {
     const userStore = useUserStore()
@@ -317,10 +358,19 @@ export const useWorkoutStore = defineStore('workout', () => {
   async function fetchSessionDetail(sessionId) {
     const { data } = await supabase
       .from('set_logs')
-      .select('*, exercises(name, section, is_bodyweight, bars(weight_kg))')
+      .select('*, exercises(name, section, order_index, is_bodyweight, bars(weight_kg))')
       .eq('session_id', sessionId)
-      .order('logged_at')
-    return data ?? []
+    if (!data) return []
+    const SECTION_ORDER = { rehab: 0, main: 1, cooldown: 2, mobility: 3, cardio: 4 }
+    return [...data].sort((a, b) => {
+      const sa = SECTION_ORDER[a.exercises?.section] ?? 99
+      const sb = SECTION_ORDER[b.exercises?.section] ?? 99
+      if (sa !== sb) return sa - sb
+      const oa = a.exercises?.order_index ?? 0
+      const ob = b.exercises?.order_index ?? 0
+      if (oa !== ob) return oa - ob
+      return (a.set_number ?? 0) - (b.set_number ?? 0)
+    })
   }
 
   async function fetchSessionCardio(session) {
@@ -475,7 +525,7 @@ export const useWorkoutStore = defineStore('workout', () => {
     startOrResumeSession, loadSetLogs, logSet, deleteSetLog,
     completeSession, getSetLog, isSetLogged, getPreviousSet,
     isCardioDone, markCardioDone, unmarkCardioDone,
-    checkAndRecordPR, epleyE1RM,
+    checkAndRecordPR, epleyE1RM, computeSessionStats,
     fetchHistory, fetchSessionDetail, fetchSessionCardio,
     fetchWeightProgress, fetchWeeklyVolume, fetchRIRStats,
     fetchCurrentWeekVolumeByMuscle, fetchDeloadCandidates,

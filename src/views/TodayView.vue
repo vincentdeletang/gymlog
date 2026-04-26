@@ -30,6 +30,7 @@ const loading = ref(true)
 const celebrating = ref(false)
 const xpEarned = ref(0)
 const earnedStreak = ref(0)
+const sessionStats = ref(null)
 
 // Modal state
 const modalOpen = ref(false)
@@ -242,10 +243,15 @@ async function deleteSet() {
 
 async function finishSession() {
   const xp = programStore.activeProgramDay?.xp_reward ?? 0
+  const exercisesById = Object.fromEntries(
+    programStore.activeExercises.map(e => [e.id, e])
+  )
+  const stats = workoutStore.computeSessionStats(exercisesById)
   const ok = await workoutStore.completeSession(xp)
   if (ok) {
     xpEarned.value = xp
     earnedStreak.value = userStore.streak
+    sessionStats.value = stats
     celebrating.value = true
   }
 }
@@ -514,6 +520,7 @@ watch(mobilityDone, done => { if (done) open.value.mobility = false })
       v-if="celebrating"
       :xp-earned="xpEarned"
       :streak-count="earnedStreak"
+      :stats="sessionStats"
       @close="celebrating = false"
     />
 

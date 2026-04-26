@@ -95,6 +95,49 @@ const groupedDetail = computed(() => {
   }
   return sections
 })
+
+// Aggregate stats over the loaded detail (main-section weighted work + RIR + duration).
+const detailStats = computed(() => {
+  const logs = sessionDetail.value
+  if (!logs.length) return null
+  let tonnage = 0, rirSum = 0, rirCount = 0, firstAt = null, lastAt = null
+  for (const log of logs) {
+    const isMain = (log.exercises?.section ?? 'main') === 'main'
+    const tare = log.exercises?.bars?.weight_kg ?? 0
+    if (isMain && log.weight_kg != null && log.reps_done != null) {
+      tonnage += (log.weight_kg + tare) * log.reps_done
+    }
+    if (isMain && log.rir != null) {
+      rirSum += log.rir
+      rirCount++
+    }
+    if (log.logged_at) {
+      const t = new Date(log.logged_at).getTime()
+      if (firstAt == null || t < firstAt) firstAt = t
+      if (lastAt  == null || t > lastAt)  lastAt = t
+    }
+  }
+  return {
+    setsDone: logs.length,
+    tonnage: Math.round(tonnage),
+    avgRir: rirCount > 0 ? Math.round((rirSum / rirCount) * 10) / 10 : null,
+    durationSec: firstAt && lastAt ? Math.round((lastAt - firstAt) / 1000) : null,
+  }
+})
+
+function durationLabel(s) {
+  if (!s) return null
+  const m = Math.floor(s / 60)
+  return m < 60 ? `${m} min` : `${Math.floor(m / 60)}h${String(m % 60).padStart(2, '0')}`
+}
+
+const SECTION_LABELS = {
+  rehab: 'PRÉVENTION',
+  main: 'MUSCU',
+  cooldown: 'RÉCUP',
+  mobility: 'MOBILITÉ',
+  cardio: 'CARDIO',
+}
 </script>
 
 <template>
@@ -162,6 +205,25 @@ const groupedDetail = computed(() => {
             {{ selectedSession.completed ? 'Terminée' : 'Abandonnée' }}
           </span>
         </div>
+
+        <div v-if="detailStats" class="detail-stats">
+          <div v-if="detailStats.tonnage > 0" class="ds-cell">
+            <span class="ds-val">{{ detailStats.tonnage.toLocaleString('fr-FR') }}</span>
+            <span class="ds-lbl">kg</span>
+          </div>
+          <div class="ds-cell">
+            <span class="ds-val">{{ detailStats.setsDone }}</span>
+            <span class="ds-lbl">séries</span>
+          </div>
+          <div v-if="detailStats.avgRir != null" class="ds-cell">
+            <span class="ds-val">{{ detailStats.avgRir }}</span>
+            <span class="ds-lbl">RIR moy.</span>
+          </div>
+          <div v-if="detailStats.durationSec" class="ds-cell">
+            <span class="ds-val">{{ durationLabel(detailStats.durationSec) }}</span>
+            <span class="ds-lbl">durée</span>
+          </div>
+        </div>
       </div>
 
       <div v-if="loadingDetail" class="loading">
@@ -174,7 +236,7 @@ const groupedDetail = computed(() => {
           :key="section"
           class="detail-section"
         >
-          <div class="detail-section-label">{{ section.toUpperCase() }}</div>
+          <div class="detail-section-label">{{ SECTION_LABELS[section] ?? section.toUpperCase() }}</div>
           <div
             v-for="log in logs"
             :key="log.id"
@@ -417,6 +479,42 @@ const groupedDetail = computed(() => {
 
 .chip-done    { background: rgba(16,185,129,0.1); color: #10b981; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 700; }
 .chip-abandoned { background: rgba(107,114,128,0.1); color: #9ca3af; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 700; }
+
+.detail-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.ds-cell {
+  background: #111827;
+  border: 1px solid #1f2937;
+  border-radius: 8px;
+  padding: 6px 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  min-width: 0;
+}
+
+.ds-val {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 16px;
+  font-weight: 800;
+  color: #f9fafb;
+  line-height: 1;
+  letter-spacing: 0.3px;
+}
+
+.ds-lbl {
+  font-size: 10px;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  font-weight: 600;
+}
 
 .loading {
   display: flex;
