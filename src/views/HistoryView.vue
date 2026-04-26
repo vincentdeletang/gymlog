@@ -266,7 +266,12 @@ const SECTION_LABELS = {
           >
             <span class="log-name">{{ block.name }}</span>
             <div class="log-data">
-              <span class="cardio-duration">{{ block.duration_minutes }} min</span>
+              <span v-if="block.duration_seconds" class="cardio-duration">
+                {{ Math.round(block.duration_seconds / 60) }} min
+                <span class="cardio-target">/ {{ block.duration_minutes }}</span>
+              </span>
+              <span v-else class="cardio-duration cardio-target">{{ block.duration_minutes }} min</span>
+              <span v-if="block.avg_hr" class="cardio-hr">{{ block.avg_hr }} bpm</span>
               <span :class="block.completed ? 'cardio-check' : 'cardio-miss'">
                 {{ block.completed ? '✓ Fait' : '– Non loggé' }}
               </span>
@@ -580,6 +585,8 @@ const SECTION_LABELS = {
 
 .cardio-row.done { border-left: 3px solid #10b981; }
 .cardio-duration { font-family: 'Barlow Condensed', sans-serif; font-size: 14px; font-weight: 700; color: #f59e0b; }
+.cardio-target { color: #6b7280; font-weight: 500; font-size: 12px; }
+.cardio-hr { font-family: 'Barlow Condensed', sans-serif; font-size: 13px; font-weight: 700; color: #ef4444; background: rgba(239,68,68,0.1); padding: 1px 6px; border-radius: 6px; }
 .cardio-check { font-size: 12px; font-weight: 700; color: #10b981; background: rgba(16,185,129,0.1); padding: 2px 8px; border-radius: 10px; }
 .cardio-miss  { font-size: 12px; font-weight: 700; color: #6b7280; background: rgba(107,114,128,0.1); padding: 2px 8px; border-radius: 10px; }
 

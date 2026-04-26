@@ -1,6 +1,7 @@
 <script setup>
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useWorkoutStore } from '@/stores/useWorkoutStore'
+import CardioDetailModal from './CardioDetailModal.vue'
 
 const props = defineProps({
   block: Object,
@@ -9,10 +10,26 @@ const props = defineProps({
 
 const workoutStore = useWorkoutStore()
 const done = computed(() => workoutStore.isCardioDone(props.block.id))
+const log  = computed(() => workoutStore.getCardioLog(props.block.id))
+const detailOpen = ref(false)
+
+const summary = computed(() => {
+  const l = log.value
+  if (!l) return null
+  const parts = []
+  if (l.duration_seconds) parts.push(`${Math.round(l.duration_seconds / 60)} min`)
+  if (l.avg_hr) parts.push(`${l.avg_hr} bpm`)
+  return parts.length ? parts.join(' · ') : null
+})
 
 function toggleDone() {
   if (done.value) workoutStore.unmarkCardioDone(props.block.id)
   else workoutStore.markCardioDone(props.block.id)
+}
+
+function onDetailSave(details) {
+  workoutStore.markCardioDone(props.block.id, details)
+  detailOpen.value = false
 }
 </script>
 
@@ -21,17 +38,32 @@ function toggleDone() {
     <div class="block-header">
       <div class="block-info">
         <span class="block-index">{{ index + 1 }}</span>
-        <div>
+        <div class="block-text">
           <div class="block-name">{{ block.name }}</div>
-          <div class="block-target">{{ block.duration_minutes }} min</div>
+          <div class="block-target">
+            {{ block.duration_minutes }} min cible
+            <span v-if="summary" class="block-actual">· {{ summary }}</span>
+          </div>
         </div>
       </div>
       <button class="done-btn" :class="{ active: done }" @click="toggleDone">
-        {{ done ? '✓ Fait' : 'Marquer fait' }}
+        {{ done ? '✓ Fait' : 'Fait' }}
       </button>
     </div>
 
+    <button class="detail-link" @click="detailOpen = true">
+      {{ summary ? '✏️ Modifier durée / FC' : '＋ Logger durée / FC' }}
+    </button>
+
     <div v-if="block.notes" class="block-notes">💡 {{ block.notes }}</div>
+
+    <CardioDetailModal
+      v-if="detailOpen"
+      :block="block"
+      :existing-log="log"
+      @close="detailOpen = false"
+      @save="onDetailSave"
+    />
   </div>
 </template>
 
@@ -50,7 +82,6 @@ function toggleDone() {
 
 .cardio-block.done {
   border-left-color: #10b981;
-  opacity: 0.7;
 }
 
 .block-header {
@@ -82,6 +113,8 @@ function toggleDone() {
   flex-shrink: 0;
 }
 
+.block-text { min-width: 0; }
+
 .block-name {
   font-family: 'Barlow Condensed', sans-serif;
   font-size: 16px;
@@ -92,6 +125,11 @@ function toggleDone() {
 .block-target {
   font-size: 12px;
   color: #9ca3af;
+}
+
+.block-actual {
+  color: #10b981;
+  font-weight: 600;
 }
 
 .done-btn {
@@ -116,9 +154,22 @@ function toggleDone() {
   color: #10b981;
 }
 
-.done-btn:active {
-  transform: scale(0.96);
+.done-btn:active { transform: scale(0.96); }
+
+.detail-link {
+  background: transparent;
+  border: 1px dashed #374151;
+  color: #9ca3af;
+  font-size: 12px;
+  font-weight: 500;
+  padding: 6px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  align-self: flex-start;
+  transition: all 0.15s;
 }
+
+.detail-link:active { background: #1f2937; color: #f9fafb; }
 
 .block-notes {
   font-size: 12px;

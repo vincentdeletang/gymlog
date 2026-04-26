@@ -856,3 +856,16 @@ update exercises set muscle_group = 'hamstrings'
 update exercises set muscle_group = 'core'
   where section = 'main' and (name ilike '%plank%' or name ilike '%dead bug%');
 ```
+
+---
+
+## 23. Migration 022 — Métriques sur `cardio_block_logs`
+
+> Permet de logger la durée réelle, la FC moyenne et des notes par bloc cardio. Utile pour valider que tu es bien en zone 2 (FC 120-140) sur Vélo, ou la durée réelle vs cible sur Tapis incliné.
+
+```sql
+alter table cardio_block_logs
+  add column if not exists duration_seconds int,
+  add column if not exists avg_hr int check (avg_hr is null or (avg_hr between 40 and 250)),
+  add column if not exists notes text;
+```

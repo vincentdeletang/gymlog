@@ -116,20 +116,44 @@ export const useWorkoutStore = defineStore('workout', () => {
     return cardioLogs.value.some(l => l.cardio_block_id === blockId)
   }
 
-  function markCardioDone(blockId) {
-    if (!currentSession.value || isCardioDone(blockId)) return
-    const payload = {
-      id: crypto.randomUUID(),
-      session_id: currentSession.value.id,
-      cardio_block_id: blockId,
-      completed_at: new Date().toISOString(),
+  function getCardioLog(blockId) {
+    return cardioLogs.value.find(l => l.cardio_block_id === blockId) ?? null
+  }
+
+  function markCardioDone(blockId, details = null) {
+    if (!currentSession.value) return
+    const existing = getCardioLog(blockId)
+
+    const payload = existing
+      ? { ...existing, ...(details ?? {}) }
+      : {
+          id: crypto.randomUUID(),
+          session_id: currentSession.value.id,
+          cardio_block_id: blockId,
+          completed_at: new Date().toISOString(),
+          duration_seconds: details?.duration_seconds ?? null,
+          avg_hr: details?.avg_hr ?? null,
+          notes: details?.notes ?? null,
+        }
+
+    if (existing) {
+      const idx = cardioLogs.value.indexOf(existing)
+      cardioLogs.value.splice(idx, 1, payload)
+    } else {
+      cardioLogs.value.push(payload)
     }
-    cardioLogs.value.push(payload)
 
     const controller = new AbortController()
     setTimeout(() => controller.abort(), 8000)
-    supabase.from('cardio_block_logs').insert(payload).abortSignal(controller.signal)
-      .then(({ error }) => { if (error) console.warn('cardio mark sync failed', error) })
+    const op = existing
+      ? supabase.from('cardio_block_logs').update({
+          duration_seconds: payload.duration_seconds,
+          avg_hr: payload.avg_hr,
+          notes: payload.notes,
+        }).eq('id', payload.id).abortSignal(controller.signal)
+      : supabase.from('cardio_block_logs').insert(payload).abortSignal(controller.signal)
+
+    op.then(({ error }) => { if (error) console.warn('cardio sync failed', error) })
       .catch(() => {})
   }
 
@@ -382,10 +406,20 @@ export const useWorkoutStore = defineStore('workout', () => {
       .order('order_index')
     const { data: logs } = await supabase
       .from('cardio_block_logs')
-      .select('cardio_block_id')
+      .select('cardio_block_id, duration_seconds, avg_hr, notes')
       .eq('session_id', session.id)
-    const done = new Set((logs ?? []).map(l => l.cardio_block_id))
-    return (blocks ?? []).map(b => ({ ...b, completed: done.has(b.id) }))
+    const logByBlock = {}
+    for (const l of (logs ?? [])) logByBlock[l.cardio_block_id] = l
+    return (blocks ?? []).map(b => {
+      const log = logByBlock[b.id]
+      return {
+        ...b,
+        completed: !!log,
+        duration_seconds: log?.duration_seconds ?? null,
+        avg_hr: log?.avg_hr ?? null,
+        log_notes: log?.notes ?? null,
+      }
+    })
   }
 
   // Stats helpers
@@ -524,7 +558,7 @@ export const useWorkoutStore = defineStore('workout', () => {
     currentSession, setLogs, cardioLogs, loading, previousSets, priorBestE1RM,
     startOrResumeSession, loadSetLogs, logSet, deleteSetLog,
     completeSession, getSetLog, isSetLogged, getPreviousSet,
-    isCardioDone, markCardioDone, unmarkCardioDone,
+    isCardioDone, markCardioDone, unmarkCardioDone, getCardioLog,
     checkAndRecordPR, epleyE1RM, computeSessionStats,
     fetchHistory, fetchSessionDetail, fetchSessionCardio,
     fetchWeightProgress, fetchWeeklyVolume, fetchRIRStats,
