@@ -82,3 +82,14 @@ button, [role="button"] {
 .fade-leave-active { transition: opacity 0.2s; }
 .fade-enter-from,
 .fade-leave-to { opacity: 0; }
+
+/* Belt-and-suspenders: a teleported overlay can get orphaned in <body> if its
+   leave transition is interrupted (parent unmount, route change). The element
+   stays at opacity 0 / translated off-screen but keeps blocking taps. Disabling
+   pointer-events while leaving means a zombie can't block the BottomNav. */
+.fade-leave-active,
+.fade-leave-to,
+.slide-up-leave-active,
+.slide-up-leave-to {
+  pointer-events: none !important;
+}

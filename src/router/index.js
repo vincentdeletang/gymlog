@@ -29,4 +29,13 @@ router.beforeEach(async (to) => {
   return true
 })
 
+// Sweep up any teleported overlay that got orphaned by an interrupted leave
+// transition. Without this, an invisible <div.sheet-overlay> can stay pinned
+// to <body> and silently block every tap on the bottom of the screen
+// (BottomNav included) until the user reloads.
+router.afterEach(() => {
+  document.querySelectorAll('body > .sheet-overlay, body > .sheet-panel')
+    .forEach(el => el.remove())
+})
+
 export default router
