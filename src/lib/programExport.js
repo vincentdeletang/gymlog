@@ -23,7 +23,7 @@ function fmtSets(ex) {
   let suffix = ''
   if (ex.is_per_side) suffix = ' par côté'
   if (ex.is_bodyweight) suffix += ' [bodyweight]'
-  else if (ex.bars) suffix += ` [${ex.bars.name} ${ex.bars.weight_kg}kg]`
+  else if (ex.bars) suffix += ` [équipement : ${ex.bars.name} (tare ${ex.bars.weight_kg}kg) + plaques chargées progressivement]`
   return `${sets}×${reps}${suffix}`
 }
 
@@ -58,6 +58,16 @@ export function buildMarkdownExport({ profileData, programDays, exercises, cardi
   lines.push(profileData?.objectifs?.trim() || '_Non renseignés — à compléter dans les Réglages._')
   lines.push('')
 
+  lines.push('## Note importante sur les charges et la progression')
+  lines.push('')
+  lines.push('**Les valeurs en kg listées à côté du matériel (ex: "Barre droite 10kg", "Haltère 2.5kg") correspondent uniquement à la *tare* — c\'est-à-dire le poids du matériel à vide.** Ce N\'EST PAS la charge de travail. Les disques sont chargés progressivement à chaque séance via une **règle de double progression** :')
+  lines.push('')
+  lines.push('- L\'utilisateur travaille en RIR 2-3 (2 à 3 reps en réserve avant l\'échec)')
+  lines.push('- Quand il atteint le top de la plage de reps cible (ex: 12 sur 10-12) avec RIR ≥ 2, il ajoute **+2kg minimum** à la séance suivante')
+  lines.push('- Disques disponibles : 20 / 15 / 10 / 5 / 2.5 / 1.25 / 1 kg')
+  lines.push('')
+  lines.push('Donc **ne juge pas l\'intensité du programme à partir de ces valeurs de tare** — la surcharge progressive réelle est appliquée. Concentre-toi sur la structure, le volume, la sélection des exercices, l\'équilibre push/pull, et la pertinence vis-à-vis du profil et des objectifs.')
+  lines.push('')
   lines.push('## Programme hebdomadaire')
   lines.push('')
 
