@@ -1,10 +1,12 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useUserStore } from '@/stores/useUserStore'
 import { useWorkoutStore } from '@/stores/useWorkoutStore'
 import { useProgramStore } from '@/stores/useProgramStore'
 import { useRouter } from 'vue-router'
 import { getAvailablePlates, setAvailablePlates, parsePlatesString, DEFAULT_PLATES } from '@/lib/plateCalc'
+import { buildMarkdownExport } from '@/lib/programExport'
+import ProgramExportModal from '@/components/settings/ProgramExportModal.vue'
 
 const userStore = useUserStore()
 const workoutStore = useWorkoutStore()
@@ -82,6 +84,43 @@ function resetPlates() {
   setAvailablePlates(DEFAULT_PLATES)
   platesInput.value = DEFAULT_PLATES.join(', ')
   platesError.value = false
+}
+
+// Profile (for IA export)
+const profil = ref('')
+const objectifs = ref('')
+const profileSaved = ref(false)
+const profileSaving = ref(false)
+
+watch(() => userStore.profileData, (p) => {
+  profil.value = p?.profil ?? ''
+  objectifs.value = p?.objectifs ?? ''
+}, { immediate: true })
+
+async function saveProfile() {
+  profileSaving.value = true
+  const ok = await userStore.saveProfileData(profil.value, objectifs.value)
+  profileSaving.value = false
+  if (ok) {
+    profileSaved.value = true
+    setTimeout(() => { profileSaved.value = false }, 2000)
+  }
+}
+
+// Markdown export for IA analysis
+const exportModalOpen = ref(false)
+const exportMarkdown = ref('')
+
+async function openExportModal() {
+  if (!programStore.programDays.length) await programStore.fetchActiveProgram()
+  exportMarkdown.value = buildMarkdownExport({
+    profileData: userStore.profileData,
+    programDays: programStore.programDays,
+    exercises: programStore.exercises,
+    cardioBlocks: programStore.cardioBlocks,
+    programName: programStore.activeProgram?.name,
+  })
+  exportModalOpen.value = true
 }
 </script>
 
@@ -197,10 +236,45 @@ function resetPlates() {
       <div v-if="platesError" class="plates-err">Format invalide. Ex : 20, 15, 10, 5, 2.5, 1.25, 1</div>
     </div>
 
+    <!-- Profile for IA export -->
+    <div class="settings-section">
+      <div class="section-label">Profil pour analyse IA</div>
+      <div class="tare-note">
+        Décrit-toi en texte libre — sera intégré au markdown d'export pour que l'IA ait tout le contexte.
+      </div>
+      <div class="profile-field">
+        <label>Profil</label>
+        <textarea
+          v-model="profil"
+          class="profile-textarea"
+          rows="5"
+          placeholder="Âge, taille, poids, contraintes physiques…"
+        />
+      </div>
+      <div class="profile-field">
+        <label>Objectifs</label>
+        <textarea
+          v-model="objectifs"
+          class="profile-textarea"
+          rows="4"
+          placeholder="Hypertrophie, longévité, prévention…"
+        />
+      </div>
+      <button class="action-btn" :disabled="profileSaving" @click="saveProfile">
+        <span v-if="profileSaving">Sauvegarde…</span>
+        <span v-else-if="profileSaved">✓ Enregistré</span>
+        <span v-else>💾 Enregistrer le profil</span>
+      </button>
+    </div>
+
     <!-- Export section -->
     <div class="settings-section">
       <div class="section-label">Données</div>
-      <button class="action-btn" :disabled="exporting" @click="exportData">
+      <button class="action-btn" @click="openExportModal">
+        🤖 Exporter le programme pour analyse IA
+      </button>
+      <div class="action-note">Markdown auto-suffisant (profil + objectifs + programme complet) à coller dans Claude / ChatGPT.</div>
+      <button class="action-btn" :disabled="exporting" @click="exportData" style="margin-top: 8px">
         <span v-if="exporting">Export en cours…</span>
         <span v-else-if="exported">✓ Exporté !</span>
         <span v-else>📤 Exporter l'historique (JSON)</span>
@@ -220,6 +294,12 @@ function resetPlates() {
     </div>
 
     <div style="height: 80px" />
+
+    <ProgramExportModal
+      v-if="exportModalOpen"
+      :markdown="exportMarkdown"
+      @close="exportModalOpen = false"
+    />
   </div>
 </template>
 
@@ -464,6 +544,37 @@ function resetPlates() {
   color: #ef4444;
   font-size: 12px;
 }
+
+.profile-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 10px;
+}
+
+.profile-field label {
+  font-size: 12px;
+  color: #9ca3af;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
+
+.profile-textarea {
+  background: #1f2937;
+  border: 1px solid #374151;
+  border-radius: 8px;
+  color: #f9fafb;
+  font-size: 13px;
+  font-family: inherit;
+  line-height: 1.5;
+  padding: 8px 10px;
+  outline: none;
+  resize: vertical;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.profile-textarea:focus { border-color: #3b82f6; }
 
 .app-info {
   padding: 16px;

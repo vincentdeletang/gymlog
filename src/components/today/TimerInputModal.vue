@@ -1,5 +1,5 @@
 <script setup>
-import { ref, watch } from 'vue'
+import { ref, watch, onUnmounted } from 'vue'
 
 const props = defineProps({
   exercise: Object,
@@ -36,6 +36,10 @@ function save() {
 function confirmDelete() {
   if (window.confirm('Supprimer cette série ?')) emit('delete')
 }
+
+onUnmounted(() => {
+  document.querySelectorAll('body > .sheet-overlay, body > .sheet-panel').forEach(el => el.remove())
+})
 </script>
 
 <template>

@@ -16,7 +16,7 @@ let timer = null
 onMounted(() => {
   playComplete()
   vibrate([60, 40, 60, 40, 120])
-  timer = setTimeout(() => emit('close'), 3500)
+  timer = setTimeout(() => emit('close'), 7000)
 })
 onUnmounted(() => { if (timer) clearTimeout(timer) })
 

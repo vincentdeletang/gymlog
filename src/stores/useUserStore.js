@@ -22,6 +22,7 @@ export const useUserStore = defineStore('user', () => {
   const xp = computed(() => userState.value?.xp_total ?? 0)
   const streak = computed(() => userState.value?.streak_current ?? 0)
   const streakBest = computed(() => userState.value?.streak_best ?? 0)
+  const profileData = computed(() => userState.value?.profile_data ?? { profil: '', objectifs: '' })
 
   const currentLevel = computed(() => {
     const x = xp.value
@@ -134,13 +135,25 @@ export const useUserStore = defineStore('user', () => {
     return Math.round(Math.abs((d2 - d1) / (1000 * 60 * 60 * 24)))
   }
 
+  async function saveProfileData(profil, objectifs) {
+    if (!user.value) return false
+    const payload = { profil: profil ?? '', objectifs: objectifs ?? '' }
+    const { error } = await supabase
+      .from('user_state')
+      .update({ profile_data: payload })
+      .eq('user_id', user.value.id)
+    if (error) return false
+    if (userState.value) userState.value.profile_data = payload
+    return true
+  }
+
   return {
     session, userState, loading,
     user, isAuthenticated,
-    xp, streak, streakBest,
+    xp, streak, streakBest, profileData,
     currentLevel, nextLevel, levelProgress,
     LEVELS,
     init, sendMagicLink, signOut,
-    fetchUserState, addXP, updateStreak,
+    fetchUserState, addXP, updateStreak, saveProfileData,
   }
 })

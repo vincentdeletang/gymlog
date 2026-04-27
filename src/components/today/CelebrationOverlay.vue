@@ -37,51 +37,49 @@ onMounted(() => {
 </script>
 
 <template>
-  <teleport to="body">
-    <div class="celebration-overlay" @click="emit('close')">
-      <div class="celebration-card">
-        <div class="trophy">🏆</div>
-        <h2 class="message">{{ message }}</h2>
-        <div class="xp-earned">+{{ xpEarned }} XP</div>
+  <div class="celebration-overlay" @click="emit('close')">
+    <div class="celebration-card">
+      <div class="trophy">🏆</div>
+      <h2 class="message">{{ message }}</h2>
+      <div class="xp-earned">+{{ xpEarned }} XP</div>
 
-        <div v-if="stats" class="stats-grid">
-          <div v-if="stats.tonnage > 0" class="stat-cell">
-            <div class="stat-val">{{ stats.tonnage.toLocaleString('fr-FR') }}</div>
-            <div class="stat-lbl">kg de tonnage</div>
-          </div>
-          <div v-if="stats.setsDone > 0" class="stat-cell">
-            <div class="stat-val">{{ stats.setsDone }}</div>
-            <div class="stat-lbl">séries</div>
-          </div>
-          <div v-if="stats.cardioMinutesActual > 0" class="stat-cell">
-            <div class="stat-val">{{ stats.cardioMinutesActual }}</div>
-            <div class="stat-lbl">min cardio</div>
-          </div>
-          <div v-if="stats.cardioBlocksDone > 0 && stats.setsDone === 0" class="stat-cell">
-            <div class="stat-val">{{ stats.cardioBlocksDone }}</div>
-            <div class="stat-lbl">{{ stats.cardioBlocksDone > 1 ? 'blocs' : 'bloc' }}</div>
-          </div>
-          <div v-if="durationLabel" class="stat-cell">
-            <div class="stat-val">{{ durationLabel }}</div>
-            <div class="stat-lbl">durée</div>
-          </div>
-          <div v-if="stats.avgRir != null" class="stat-cell">
-            <div class="stat-val">{{ stats.avgRir }}</div>
-            <div class="stat-lbl">RIR moyen</div>
-          </div>
+      <div v-if="stats" class="stats-grid">
+        <div v-if="stats.tonnage > 0" class="stat-cell">
+          <div class="stat-val">{{ stats.tonnage.toLocaleString('fr-FR') }}</div>
+          <div class="stat-lbl">kg de tonnage</div>
         </div>
-
-        <div v-if="stats?.prCount > 0" class="pr-banner">
-          🏆 {{ stats.prCount }} {{ stats.prCount > 1 ? 'records battus' : 'record battu' }}
+        <div v-if="stats.setsDone > 0" class="stat-cell">
+          <div class="stat-val">{{ stats.setsDone }}</div>
+          <div class="stat-lbl">séries</div>
         </div>
-
-        <div v-if="streakCount > 1" class="streak-info">
-          🔥 {{ streakCount }} jours de suite
+        <div v-if="stats.cardioMinutesActual > 0" class="stat-cell">
+          <div class="stat-val">{{ stats.cardioMinutesActual }}</div>
+          <div class="stat-lbl">min cardio</div>
         </div>
-        <p class="tap-hint">Tap pour continuer</p>
+        <div v-if="stats.cardioBlocksDone > 0 && stats.setsDone === 0" class="stat-cell">
+          <div class="stat-val">{{ stats.cardioBlocksDone }}</div>
+          <div class="stat-lbl">{{ stats.cardioBlocksDone > 1 ? 'blocs' : 'bloc' }}</div>
+        </div>
+        <div v-if="durationLabel" class="stat-cell">
+          <div class="stat-val">{{ durationLabel }}</div>
+          <div class="stat-lbl">durée</div>
+        </div>
+        <div v-if="stats.avgRir != null" class="stat-cell">
+          <div class="stat-val">{{ stats.avgRir }}</div>
+          <div class="stat-lbl">RIR moyen</div>
+        </div>
       </div>
+
+      <div v-if="stats?.prCount > 0" class="pr-banner">
+        🏆 {{ stats.prCount }} {{ stats.prCount > 1 ? 'records battus' : 'record battu' }}
+      </div>
+
+      <div v-if="streakCount > 1" class="streak-info">
+        🔥 {{ streakCount }} jours de suite
+      </div>
+      <p class="tap-hint">Tap pour continuer</p>
     </div>
-  </teleport>
+  </div>
 </template>
 
 <style scoped>

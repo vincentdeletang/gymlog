@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onUnmounted } from 'vue'
 import { parseRepsTarget } from '@/lib/progression'
 import { decomposeWeight, formatDecomposition } from '@/lib/plateCalc'
 
@@ -115,6 +115,10 @@ function save() {
 function confirmDelete() {
   if (window.confirm('Supprimer cette série ?')) emit('delete')
 }
+
+onUnmounted(() => {
+  document.querySelectorAll('body > .sheet-overlay, body > .sheet-panel').forEach(el => el.remove())
+})
 </script>
 
 <template>

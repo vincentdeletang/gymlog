@@ -876,3 +876,74 @@ alter table exercises add column if not exists is_per_side boolean not null defa
 update exercises set is_per_side = true
   where name in ('Pendulaires de Codman', 'Stretch doorway');
 ```
+
+---
+
+## 25. Migration 023 — Cooldown décompression : Suspension 2×30s → 1×30-45s + ajout Genoux-poitrine
+
+> La suspension barre fixe debout n'apporte pas vraiment de décompression lombaire à 136kg (le grip sature avant que le bassin tire passivement). Du coup on la garde pour l'épaule (capsule, sous-acromial, scapular hang) avec **1×30-45s** au lieu de 2×30s, et on ajoute **Genoux-poitrine 1×60s** pour la déco lombaire passive (zéro effort, max relâchement). 2 séries de cooldown au total au lieu de 2 séries identiques.
+
+```sql
+UPDATE exercises
+   SET sets_target = 1,
+       reps_target = '30-45s'
+ WHERE name = 'Suspension barre fixe'
+   AND section = 'cooldown';
+
+DO $$
+DECLARE
+  d_lundi    UUID;
+  d_mercredi UUID;
+  d_vendredi UUID;
+  notes_text TEXT := 'Couché sur le dos, ramener les 2 genoux vers la poitrine, mains autour des tibias, relâcher complètement le bas du dos. Respiration lente.';
+BEGIN
+  SELECT pd.id INTO d_lundi    FROM program_days pd JOIN programs p ON p.id=pd.program_id WHERE p.is_active=true AND pd.day_of_week=1;
+  SELECT pd.id INTO d_mercredi FROM program_days pd JOIN programs p ON p.id=pd.program_id WHERE p.is_active=true AND pd.day_of_week=3;
+  SELECT pd.id INTO d_vendredi FROM program_days pd JOIN programs p ON p.id=pd.program_id WHERE p.is_active=true AND pd.day_of_week=5;
+
+  INSERT INTO exercises (program_day_id, name, order_index, sets_target, reps_target, is_bodyweight, notes, section)
+  SELECT d_lundi, 'Genoux-poitrine',
+    (SELECT COALESCE(MAX(order_index), 0) + 1 FROM exercises WHERE program_day_id = d_lundi),
+    1, '60s', true, notes_text, 'cooldown'
+  WHERE NOT EXISTS (SELECT 1 FROM exercises WHERE program_day_id=d_lundi AND name='Genoux-poitrine');
+
+  INSERT INTO exercises (program_day_id, name, order_index, sets_target, reps_target, is_bodyweight, notes, section)
+  SELECT d_mercredi, 'Genoux-poitrine',
+    (SELECT COALESCE(MAX(order_index), 0) + 1 FROM exercises WHERE program_day_id = d_mercredi),
+    1, '60s', true, notes_text, 'cooldown'
+  WHERE NOT EXISTS (SELECT 1 FROM exercises WHERE program_day_id=d_mercredi AND name='Genoux-poitrine');
+
+  INSERT INTO exercises (program_day_id, name, order_index, sets_target, reps_target, is_bodyweight, notes, section)
+  SELECT d_vendredi, 'Genoux-poitrine',
+    (SELECT COALESCE(MAX(order_index), 0) + 1 FROM exercises WHERE program_day_id = d_vendredi),
+    1, '60s', true, notes_text, 'cooldown'
+  WHERE NOT EXISTS (SELECT 1 FROM exercises WHERE program_day_id=d_vendredi AND name='Genoux-poitrine');
+END $$;
+```
+
+---
+
+## 26. Migration 024 — Notes tapis incliné recalibrées (pente max 3% + repères sans capteur FC)
+
+> Le tapis perso plafonne à 3% (impossible de viser 8-12%). Sans chest strap / montre la fourchette FC est inutilisable. On bascule sur vitesse + talk test + RPE.
+
+```sql
+UPDATE cardio_blocks
+   SET notes = 'Pente 3% (max), 5,5-6,5 km/h. Talk test : phrases complètes possibles. RPE 4-5/10 (effort modéré, soutenable 1h théorique). Torse droit.'
+ WHERE name = 'Tapis incliné'
+   AND program_day_id IN (
+     SELECT pd.id FROM program_days pd
+     JOIN programs p ON p.id = pd.program_id
+     WHERE p.is_active = true AND pd.day_of_week IN (1, 5)
+   );
+```
+
+---
+
+## 27. Migration 025 — Colonne `profile_data` sur `user_state`
+
+> Stockage du profil utilisateur (texte libre `profil` + `objectifs`) pour l'export markdown destiné à l'analyse IA. La feature dans Settings remplit ces champs et les inclut dans le markdown généré. Aucune donnée perso n'est commitée — chaque utilisateur remplit son profil depuis l'UI.
+
+```sql
+ALTER TABLE user_state ADD COLUMN IF NOT EXISTS profile_data jsonb;
+```

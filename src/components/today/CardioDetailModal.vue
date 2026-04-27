@@ -1,5 +1,5 @@
 <script setup>
-import { ref, watch } from 'vue'
+import { ref, watch, onUnmounted } from 'vue'
 
 const props = defineProps({
   block: Object,
@@ -8,35 +8,35 @@ const props = defineProps({
 const emit = defineEmits(['close', 'save'])
 
 const durationMin = ref('')
-const avgHr = ref('')
 const notes = ref('')
 
 watch(() => props.existingLog, (log) => {
   if (log) {
     durationMin.value = log.duration_seconds ? String(Math.round(log.duration_seconds / 60)) : ''
-    avgHr.value       = log.avg_hr ? String(log.avg_hr) : ''
     notes.value       = log.notes ?? ''
   } else {
     durationMin.value = props.block?.duration_minutes ? String(props.block.duration_minutes) : ''
-    avgHr.value = ''
     notes.value = ''
   }
 }, { immediate: true })
 
 function save() {
   const minutes = parseFloat(durationMin.value)
-  const hr = parseInt(avgHr.value)
   emit('save', {
     duration_seconds: minutes > 0 ? Math.round(minutes * 60) : null,
-    avg_hr: hr > 0 ? hr : null,
+    avg_hr: null,
     notes: notes.value.trim() || null,
   })
 }
+
+onUnmounted(() => {
+  document.querySelectorAll('body > .cardio-detail-overlay').forEach(el => el.remove())
+})
 </script>
 
 <template>
   <teleport to="body">
-    <div class="overlay" @click.self="emit('close')">
+    <div class="cardio-detail-overlay" @click.self="emit('close')">
       <div class="panel">
         <div class="handle" />
 
@@ -55,19 +55,6 @@ function save() {
             min="0"
             class="input-big"
             autofocus
-          />
-        </div>
-
-        <div class="field">
-          <label>FC moyenne (bpm) <span class="hint">— optionnel, pour valider la zone</span></label>
-          <input
-            v-model="avgHr"
-            type="number"
-            inputmode="numeric"
-            min="40"
-            max="250"
-            placeholder="Ex: 130"
-            class="input-big"
           />
         </div>
 
@@ -91,7 +78,7 @@ function save() {
 </template>
 
 <style scoped>
-.overlay {
+.cardio-detail-overlay {
   position: fixed;
   inset: 0;
   background: rgba(10,14,23,0.7);

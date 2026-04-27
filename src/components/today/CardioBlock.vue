@@ -16,10 +16,8 @@ const detailOpen = ref(false)
 const summary = computed(() => {
   const l = log.value
   if (!l) return null
-  const parts = []
-  if (l.duration_seconds) parts.push(`${Math.round(l.duration_seconds / 60)} min`)
-  if (l.avg_hr) parts.push(`${l.avg_hr} bpm`)
-  return parts.length ? parts.join(' · ') : null
+  if (l.duration_seconds) return `${Math.round(l.duration_seconds / 60)} min`
+  return null
 })
 
 function toggleDone() {
@@ -52,7 +50,7 @@ function onDetailSave(details) {
     </div>
 
     <button class="detail-link" @click="detailOpen = true">
-      {{ summary ? '✏️ Modifier durée / FC' : '＋ Logger durée / FC' }}
+      {{ summary ? '✏️ Modifier durée' : '＋ Logger durée' }}
     </button>
 
     <div v-if="block.notes" class="block-notes">💡 {{ block.notes }}</div>
