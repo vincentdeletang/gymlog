@@ -1,5 +1,5 @@
 -- Seed equipment bars + auto-assign to exercises
--- Run AFTER migration 003 and seed_program.sql
+-- Run AFTER migration 002 and seed_program.sql
 
 INSERT INTO bars (name, weight_kg) VALUES
   ('Barre droite', 10),

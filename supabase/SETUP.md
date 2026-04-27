@@ -236,9 +236,7 @@ end $$;
 
 ---
 
-## 3. Migration 003 — Table `bars` + `bar_id` sur `exercises`
-
-> **C'est ça que tu dois lancer maintenant** si la BDD est déjà initialisée.
+## 3. Migration 002 — Table `bars` + `bar_id` sur `exercises`
 
 ```sql
 CREATE TABLE IF NOT EXISTS bars (
@@ -246,9 +244,6 @@ CREATE TABLE IF NOT EXISTS bars (
   name      TEXT NOT NULL,
   weight_kg DECIMAL(5,2) NOT NULL
 );
-
--- Nettoie la migration 002 si elle a été appliquée par erreur
-ALTER TABLE exercises DROP COLUMN IF EXISTS bar_weight_kg;
 
 ALTER TABLE exercises
   ADD COLUMN IF NOT EXISTS bar_id UUID REFERENCES bars(id) ON DELETE SET NULL;
@@ -264,7 +259,7 @@ CREATE POLICY "Authenticated users can read bars"
 
 ## 4. Seed — Barres & auto-assignation
 
-> À lancer juste après la migration 003.
+> À lancer juste après la migration 002.
 
 ```sql
 INSERT INTO bars (name, weight_kg) VALUES
@@ -298,7 +293,7 @@ END $$;
 
 ---
 
-## 5. Migration 004 — Nouveau programme Mercredi
+## 5. Migration 003 — Nouveau programme Mercredi
 
 > À lancer si la BDD est déjà initialisée avec l'ancien programme (Split squat + Hip thrust).
 
@@ -340,7 +335,7 @@ END $$;
 
 ---
 
-## 6. Migration 005 — Suspension barre fixe (fin de séance muscu)
+## 6. Migration 004 — Suspension barre fixe (fin de séance muscu)
 
 > Ajoute l'exercice en dernière position sur lundi, mercredi et vendredi.
 
@@ -372,7 +367,7 @@ END $$;
 
 ---
 
-## 7. Migration 006 — Section cooldown
+## 7. Migration 005 — Section cooldown
 
 > Ajoute `'cooldown'` comme type de section valide et bascule les suspensions de `rehab` → `cooldown`.
 
@@ -386,21 +381,15 @@ UPDATE exercises SET section = 'cooldown' WHERE name = 'Suspension barre fixe';
 
 ---
 
-## 8. Migration 007 — Mise à jour programmes + section mobility
+## 8. Migration 006 — Section mobility + mise à jour programmes Lundi/Vendredi/Samedi
 
-### 8a. Contrainte mobility (à lancer en premier, séparément)
+> Idempotent : utilise des UPDATE au lieu de DELETE pour préserver l'historique des set_logs.
 
 ```sql
 ALTER TABLE exercises DROP CONSTRAINT IF EXISTS exercises_section_check;
 ALTER TABLE exercises ADD CONSTRAINT exercises_section_check
   CHECK (section IN ('main', 'rehab', 'cardio', 'cooldown', 'mobility'));
-```
 
-### 8b. Mise à jour des programmes (007_fix — utiliser celle-ci, pas 007)
-
-> Utilise des UPDATE au lieu de DELETE pour préserver l'historique des set_logs.
-
-```sql
 DO $$
 DECLARE
   d_lundi UUID; bar_ez UUID; bar_droite UUID; bar_haltere UUID;
@@ -449,17 +438,22 @@ DECLARE
 BEGIN
   SELECT pd.id INTO d_samedi FROM program_days pd JOIN programs p ON p.id = pd.program_id WHERE p.is_active = true AND pd.day_of_week = 6;
   DELETE FROM cardio_blocks WHERE program_day_id=d_samedi;
-  INSERT INTO exercises (program_day_id, name, order_index, sets_target, reps_target, is_bodyweight, notes, section) VALUES
-    (d_samedi, 'Open book',                  1, 2, '10/côté',        true, 'Allongé sur le côté, genoux à 90°, ouvrir le bras du dessus vers l''arrière en suivant du regard — clé épaule', 'mobility'),
-    (d_samedi, '90/90 hip switch',            2, 1, '10 transitions',  true, 'Assis au sol, jambes à 90° des deux côtés, basculer lentement. Mains au sol si raide.',                        'mobility'),
-    (d_samedi, 'Pigeon modifié (sur le dos)', 3, 2, '60s/côté',       true, 'Allongé sur le dos, cheville sur le genou opposé, tirer la cuisse vers la poitrine.',                          'mobility'),
-    (d_samedi, 'Respiration diaphragmatique', 4, 1, '10 cycles',      true, 'Allongé sur le ventre, front sur les mains — expirer ventre, pas poitrine. Active la récupération.',           'mobility');
+  INSERT INTO exercises (program_day_id, name, order_index, sets_target, reps_target, is_bodyweight, notes, section)
+  SELECT * FROM (VALUES
+    (d_samedi, 'Open book',                  1, 2, '10/côté',        true, 'Allongé sur le côté, genoux à 90°, ouvrir le bras du dessus vers l''arrière en suivant du regard — clé épaule',  'mobility'),
+    (d_samedi, '90/90 hip switch',            2, 1, '10 transitions',  true, 'Assis au sol, jambes à 90° des deux côtés, basculer lentement. Mains au sol si raide.',                          'mobility'),
+    (d_samedi, 'Pigeon modifié (sur le dos)', 3, 2, '60s/côté',       true, 'Allongé sur le dos, cheville sur le genou opposé, tirer la cuisse vers la poitrine.',                             'mobility'),
+    (d_samedi, 'Respiration diaphragmatique', 4, 1, '10 cycles',      true, 'Allongé sur le ventre, front sur les mains — expirer ventre, pas poitrine. Active la récupération.',              'mobility')
+  ) AS t(program_day_id, name, order_index, sets_target, reps_target, is_bodyweight, notes, section)
+  WHERE NOT EXISTS (
+    SELECT 1 FROM exercises WHERE exercises.program_day_id=d_samedi AND exercises.name=t.name
+  );
 END $$;
 ```
 
 ---
 
-## 9. Migration 008 — Dead bug mercredi + suppression Reverse crunches
+## 9. Migration 007 — Dead bug mercredi + suppression Reverse crunches
 
 ```sql
 DO $$
@@ -489,7 +483,7 @@ END $$;
 
 ---
 
-## 10. Migration 009 — Plank début de bloc lundi + Kickbacks 4→3 séries vendredi
+## 10. Migration 008 — Plank début de bloc lundi + Kickbacks 4→3 séries vendredi
 
 ```sql
 DO $$
@@ -518,7 +512,7 @@ END $$;
 
 ---
 
-## 11. Migration 010 — Goblet squat mercredi + fentes 4→3 + suppression mollets
+## 11. Migration 009 — Goblet squat mercredi + fentes 4→3 + suppression mollets
 
 ```sql
 DO $$
@@ -552,7 +546,7 @@ END $$;
 
 ---
 
-## 12. Migration 011 — Curl barre EZ avant Rowing haltère (lundi) + suppression Dead bug (vendredi)
+## 12. Migration 010 — Curl barre EZ avant Rowing haltère (lundi) + suppression Dead bug (vendredi)
 
 ```sql
 DO $$
@@ -580,7 +574,7 @@ END $$;
 
 ---
 
-## 13. Migration 012 — Plank lundi→vendredi + suppression Élévations latérales
+## 13. Migration 011 — Plank lundi→vendredi + suppression Élévations latérales
 
 ```sql
 DO $$
@@ -636,7 +630,7 @@ END $$;
 
 ---
 
-## 14. Migration 013 — Suppression Music Boxing (Mardi)
+## 14. Migration 012 — Suppression Music Boxing (Mardi)
 
 > Le timer de boxe intègre l'échauffement directement (Round Échauffement). Supprime le bloc "Music Boxing" et remet l'ordre à 1 pour "Sac de boxe".
 
@@ -654,7 +648,7 @@ END $$;
 
 ---
 
-## 15. Migration 014 — Remplace corde à sauter par tapis incliné (lundi + vendredi)
+## 15. Migration 013 — Remplace corde à sauter par tapis incliné (lundi + vendredi)
 
 > La corde à sauter n'est pas adaptée au gabarit (impact articulaire trop élevé à 136kg). Remplacée par de la marche inclinée : même stimulus cardio zone 2, sans impact et meilleur pour les lombaires.
 
@@ -686,7 +680,7 @@ END $$;
 
 ---
 
-## 16. Migration 015 — Suspension barre fixe assistée
+## 16. Migration 014 — Suspension barre fixe assistée
 
 > À 136kg le dead hang pur est limité par le grip avant que l'étirement vertébral soit vraiment profitable. Pieds en soutien (sol ou genoux sur banc) déchargent 40-60% du poids → tu tiens 30s propres et la traction spinale est réelle. Épaules engagées légèrement (scapular hang) pour protéger la gauche.
 
@@ -707,7 +701,7 @@ END $$;
 
 ---
 
-## 17. Migration 016 — Table `cardio_block_logs`
+## 17. Migration 015 — Table `cardio_block_logs`
 
 > Permet de tracker la complétion individuelle de chaque bloc cardio dans une session (important pour les jours muscu+cardio où tu peux faire la muscu sans le cardio).
 
@@ -740,7 +734,7 @@ create policy "Users own their cardio_block_logs"
 
 ---
 
-## 18. Migration 017 — Backfill cardios des sessions passées
+## 18. Migration 016 — Backfill cardios des sessions passées
 
 > Pour chaque session complétée (completed=true), crée un cardio_block_logs pour chaque bloc cardio du program_day. Idempotent (peut être relancée sans doublons).
 
@@ -755,7 +749,7 @@ on conflict (session_id, cardio_block_id) do nothing;
 
 ---
 
-## 19. Migration 018 — Policy UPDATE sur `exercises` + `cardio_blocks`
+## 19. Migration 017 — Policy UPDATE sur `exercises` + `cardio_blocks`
 
 > La migration 001 n'a créé qu'une policy SELECT sur ces tables. Du coup l'UPDATE depuis SettingsView (changement de barre) était silencieusement bloqué par RLS — pas d'erreur côté client, juste 0 ligne affectée. Cette migration ouvre l'UPDATE aux utilisateurs authentifiés (cohérent avec le SELECT existant, programme partagé sans `user_id`).
 
@@ -771,7 +765,7 @@ create policy "Authenticated users can update cardio_blocks"
 
 ---
 
-## 20. Migration 019 — Table `bodyweight_logs`
+## 20. Migration 018 — Table `bodyweight_logs`
 
 > Tracking du poids corporel au fil du temps (graph dans Stats). Une entrée par jour max (upsert sur `user_id + log_date`).
 
@@ -799,7 +793,7 @@ create policy "Users own their bodyweight_logs"
 
 ---
 
-## 21. Migration 020 — Table `soreness_logs`
+## 21. Migration 019 — Table `soreness_logs`
 
 > Check-in douleur avant séance (épaule G prioritaire). `level` 0-3, une entrée par (jour, body_part).
 
@@ -828,7 +822,7 @@ create policy "Users own their soreness_logs"
 
 ---
 
-## 22. Migration 021 — Colonne `muscle_group` sur `exercises` + backfill
+## 22. Migration 020 — Colonne `muscle_group` sur `exercises` + backfill
 
 > Permet le calcul du volume hebdomadaire par groupe musculaire. Backfill best-effort via `name ILIKE`. Si un exo te semble mal classé, fix-le manuellement dans la table `exercises`.
 
@@ -859,7 +853,7 @@ update exercises set muscle_group = 'core'
 
 ---
 
-## 23. Migration 022 — Métriques sur `cardio_block_logs`
+## 23. Migration 021 — Métriques sur `cardio_block_logs`
 
 > Permet de logger la durée réelle, la FC moyenne et des notes par bloc cardio. Utile pour valider que tu es bien en zone 2 (FC 120-140) sur Vélo, ou la durée réelle vs cible sur Tapis incliné.
 
@@ -868,4 +862,17 @@ alter table cardio_block_logs
   add column if not exists duration_seconds int,
   add column if not exists avg_hr int check (avg_hr is null or (avg_hr between 40 and 250)),
   add column if not exists notes text;
+```
+
+---
+
+## 24. Migration 022 — Flag `is_per_side` sur `exercises`
+
+> Pour les exos unilatéraux qui se font "sur les deux côtés par série" (Pendulaires de Codman, Stretch doorway), le timer enchaîne automatiquement Côté 1 → Côté 2 avec un mini-décompte entre les deux. La cible `30s` reste par côté ; le total loggué est `60s` (somme des deux côtés).
+
+```sql
+alter table exercises add column if not exists is_per_side boolean not null default false;
+
+update exercises set is_per_side = true
+  where name in ('Pendulaires de Codman', 'Stretch doorway');
 ```

@@ -8,6 +8,7 @@ const props = defineProps({
   targetSeconds: Number,
   targetMax: Number,
   isRange: Boolean,
+  perSide: Boolean,
 })
 const emit = defineEmits(['stop', 'cancel'])
 
@@ -16,9 +17,11 @@ const {
   playComplete, vibrate,
 } = useAudio()
 
-const phase = ref('prep') // 'prep' | 'run' | 'post'
+const phase = ref('prep') // 'prep' | 'run' | 'between' | 'post'
+const side = ref(1)
 const prepCount = ref(3)
 const elapsedMs = ref(0)
+const accumulatedMs = ref(0)
 
 let startRunTime = 0
 let rafId = null
@@ -53,11 +56,23 @@ const progress = computed(() => {
 })
 
 const displayTime = computed(() => {
-  if (phase.value === 'prep') return String(Math.max(prepCount.value, 0))
+  if (phase.value === 'prep' || phase.value === 'between') {
+    return String(Math.max(prepCount.value, 0))
+  }
   const s = phase.value === 'post' ? overtimeSec.value : remainingSec.value
   const m = Math.floor(s / 60)
   const ss = String(s % 60).padStart(2, '0')
   return `${m}:${ss}`
+})
+
+const sideLabel = computed(() => {
+  if (!props.perSide) return null
+  return side.value === 1 ? 'Côté 1' : 'Côté 2'
+})
+
+const prepLabel = computed(() => {
+  if (phase.value === 'between') return '→ CÔTÉ 2'
+  return 'PRÊT'
 })
 
 const ringStyle = computed(() => ({
@@ -100,6 +115,14 @@ function checkMilestones() {
       }
     }
     if (sec >= target) {
+      if (props.perSide && side.value === 1) {
+        fireOnce('target_side1', () => {
+          playComplete()
+          vibrate([120, 60, 120])
+        })
+        startBetween()
+        return
+      }
       fireOnce('target', () => {
         playComplete()
         vibrate([120, 60, 120, 60, 200])
@@ -154,6 +177,29 @@ function startPrep() {
   }, 1000)
 }
 
+function startBetween() {
+  if (rafId) { cancelAnimationFrame(rafId); rafId = null }
+  if (tickTimer) { clearInterval(tickTimer); tickTimer = null }
+  accumulatedMs.value += elapsedMs.value
+  elapsedMs.value = 0
+  fired.clear()
+  phase.value = 'between'
+  prepCount.value = 3
+  playPrepTick()
+  vibrate([50])
+  prepTimer = setInterval(() => {
+    prepCount.value--
+    if (prepCount.value > 0) {
+      playPrepTick()
+      vibrate([50])
+    } else {
+      clearInterval(prepTimer); prepTimer = null
+      side.value = 2
+      startRun()
+    }
+  }, 1000)
+}
+
 async function requestWakeLock() {
   try {
     wakeLock = await navigator.wakeLock?.request('screen')
@@ -182,7 +228,8 @@ function teardown() {
 
 function doStop() {
   teardown()
-  const seconds = Math.max(1, elapsedSec.value)
+  const totalMs = accumulatedMs.value + elapsedMs.value
+  const seconds = Math.max(1, Math.floor(totalMs / 1000))
   emit('stop', { seconds })
 }
 
@@ -207,13 +254,18 @@ onUnmounted(() => {
     <div class="timer-card">
       <div class="timer-header">
         <div class="ex-name">{{ exercise.name }}</div>
-        <div class="ex-sub">Série {{ setNumber }} · cible {{ formattedTarget }}</div>
+        <div class="ex-sub">
+          Série {{ setNumber }} · cible {{ formattedTarget }}<template v-if="perSide"> par côté</template>
+        </div>
+        <div v-if="sideLabel" class="side-badge" :style="{ background: accent + '22', color: accent, borderColor: accent + '55' }">
+          {{ sideLabel }}
+        </div>
       </div>
 
       <div class="ring-wrap" :style="{ '--accent': accent }">
         <div class="ring" :style="ringStyle">
           <div class="ring-inner">
-            <div v-if="phase === 'prep'" class="prep-label">PRÊT</div>
+            <div v-if="phase === 'prep' || phase === 'between'" class="prep-label">{{ prepLabel }}</div>
             <div class="big-time" :class="phase">{{ displayTime }}</div>
             <div v-if="phase === 'post'" class="overtime-label">BONUS</div>
           </div>
@@ -321,9 +373,23 @@ onUnmounted(() => {
   font-variant-numeric: tabular-nums;
 }
 
-.big-time.prep {
+.big-time.prep,
+.big-time.between {
   font-size: 110px;
   color: var(--accent);
+}
+
+.side-badge {
+  margin-top: 8px;
+  display: inline-block;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  padding: 4px 12px;
+  border-radius: 20px;
+  border: 1px solid;
 }
 
 .big-time.post {

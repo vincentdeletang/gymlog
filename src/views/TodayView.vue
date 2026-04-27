@@ -525,6 +525,7 @@ watch(mobilityDone, done => { if (done) open.value.mobility = false })
       :target-seconds="timerTarget.min"
       :target-max="timerTarget.max"
       :is-range="timerTarget.isRange"
+      :per-side="!!timerExercise?.is_per_side"
       @stop="onTimerStop"
       @cancel="onTimerCancel"
     />

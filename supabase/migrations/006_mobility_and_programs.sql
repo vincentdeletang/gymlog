@@ -1,5 +1,11 @@
--- Correction de 007 : UPDATE à la place de DELETE pour préserver les set_logs existants
--- La contrainte 'mobility' du début de 007 a déjà été appliquée, ne pas relancer
+-- Section 'mobility' + mise à jour programmes Lundi / Vendredi / Samedi
+-- Consolidation de l'ancien doublon 007 (constraint au début + version "fix" avec UPDATE pour préserver les set_logs).
+-- Idempotent : utilise UPDATE/INSERT WHERE NOT EXISTS, ne supprime rien.
+
+-- 1) Nouvelle section 'mobility'
+ALTER TABLE exercises DROP CONSTRAINT IF EXISTS exercises_section_check;
+ALTER TABLE exercises ADD CONSTRAINT exercises_section_check
+  CHECK (section IN ('main', 'rehab', 'cardio', 'cooldown', 'mobility'));
 
 -- ============================================================
 -- LUNDI — update en place + insert du nouveau rowing barre

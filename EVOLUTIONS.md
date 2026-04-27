@@ -90,7 +90,7 @@ Skip réduit. À ~3-4 séances/semaine sur le long terme, un rappel intelligent 
 UI pour gérer son programme directement depuis l'app : ajouter/retirer/réordonner exos, créer/supprimer jours, modifier sets/reps/notes/section/muscle_group/bar_id.
 
 ### Pourquoi
-**Le plus gros débloqueur**. Aujourd'hui, modifier le programme = écrire une migration SQL et la passer dans Supabase. C'est OK pour un dev mais friction réelle pour itérer. Vu que je modifie mon programme régulièrement (cf. migrations 004, 007, 008, 009, 010, 011, 012, 014), une UI native ferait passer GymLog de « projet perso jetable » à « outil pérenne ».
+**Le plus gros débloqueur**. Aujourd'hui, modifier le programme = écrire une migration SQL et la passer dans Supabase. C'est OK pour un dev mais friction réelle pour itérer. Vu que je modifie mon programme régulièrement (cf. migrations 003, 006, 007, 008, 009, 010, 011, 013), une UI native ferait passer GymLog de « projet perso jetable » à « outil pérenne ».
 
 Bénéfice secondaire : ouvre la voie à de futures features (présets de programmes, A/B comparer 2 programmes sur 6 semaines, suggestions auto basées sur les PRs).
 
@@ -112,7 +112,7 @@ Une nouvelle vue `ProgramEditView` (route `/program/edit`).
 
 ### Pré-requis BDD
 **Aucun nouveau** — le schéma actuel supporte tout. Mais :
-- RLS actuel : `exercises` est `select` partagé, `update` ouvert depuis migration 018, **mais pas `insert` ni `delete`**. Faudra une migration RLS pour ouvrir tout aux `authenticated`. Cohérent avec « programme partagé sans `user_id` ». Si on veut un jour multi-utilisateurs, faudra remettre une scope par `user_id`.
+- RLS actuel : `exercises` est `select` partagé, `update` ouvert depuis migration 017, **mais pas `insert` ni `delete`**. Faudra une migration RLS pour ouvrir tout aux `authenticated`. Cohérent avec « programme partagé sans `user_id` ». Si on veut un jour multi-utilisateurs, faudra remettre une scope par `user_id`.
 
 ### Décisions à prendre
 - Édition live (chaque champ envoie une mutation) ou édition par lots (« Enregistrer ») ?

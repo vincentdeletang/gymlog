@@ -60,8 +60,12 @@ const totalWeight = computed(() => {
 const plateBreakdown = computed(() => {
   const discs = parseFloat(weightKg.value)
   if (!discs || discs <= 0) return null
-  const decomp = decomposeWeight(discs)
-  return decomp ? formatDecomposition(decomp) : null
+  const hasBar = !!props.exercise?.bars
+  const perSide = hasBar ? discs / 2 : discs
+  const decomp = decomposeWeight(perSide)
+  if (!decomp) return null
+  const formatted = formatDecomposition(decomp)
+  return hasBar ? `${formatted} kg par côté` : `${formatted} kg`
 })
 
 const progression = computed(() => {
@@ -162,7 +166,7 @@ function confirmDelete() {
               class="field-input"
             />
             <div v-if="plateBreakdown" class="plates-hint">
-              <span class="plates-icon">⚖️</span> {{ plateBreakdown }} kg
+              <span class="plates-icon">⚖️</span> {{ plateBreakdown }}
             </div>
             <div v-if="totalWeight" class="total-hint">→ {{ totalWeight }} kg charge totale</div>
           </div>

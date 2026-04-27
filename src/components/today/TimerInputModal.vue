@@ -13,17 +13,18 @@ const props = defineProps({
 const emit = defineEmits(['close', 'save', 'delete'])
 
 const seconds = ref('')
+const perSide = () => !!props.exercise?.is_per_side
 
 watch(() => [props.existingLog, props.targetSeconds], ([log, target]) => {
   if (log?.reps_done != null) seconds.value = String(log.reps_done)
-  else if (target) seconds.value = String(target)
+  else if (target) seconds.value = String(perSide() ? target * 2 : target)
   else seconds.value = ''
 }, { immediate: true })
 
 const targetLabel = () => {
   if (!props.targetSeconds) return ''
-  if (props.isRange) return `${props.targetSeconds}-${props.targetMax}s`
-  return `${props.targetSeconds}s`
+  const base = props.isRange ? `${props.targetSeconds}-${props.targetMax}s` : `${props.targetSeconds}s`
+  return perSide() ? `${base} × 2 côtés` : base
 }
 
 function save() {
