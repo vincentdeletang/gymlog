@@ -1,9 +1,7 @@
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
 import { useRoute } from 'vue-router'
 
 const route = useRoute()
-const navEl = ref(null)
 
 const tabs = [
   { path: '/today',   icon: '🏋️', label: "Aujourd'hui" },
@@ -11,30 +9,10 @@ const tabs = [
   { path: '/stats',   icon: '📊', label: 'Progression' },
   { path: '/settings',icon: '⚙️', label: 'Réglages' },
 ]
-
-// iOS/Android standalone PWAs can lose hit-testing on fixed-position elements
-// after returning from background — the nav renders but taps fall through.
-// Toggling display + reading offsetHeight forces a layout pass that restores it.
-function onVisibility() {
-  if (document.visibilityState !== 'visible' || !navEl.value) return
-  const el = navEl.value
-  el.style.display = 'none'
-  void el.offsetHeight
-  el.style.display = ''
-}
-
-onMounted(() => {
-  document.addEventListener('visibilitychange', onVisibility)
-  window.addEventListener('pageshow', onVisibility)
-})
-onUnmounted(() => {
-  document.removeEventListener('visibilitychange', onVisibility)
-  window.removeEventListener('pageshow', onVisibility)
-})
 </script>
 
 <template>
-  <nav ref="navEl" class="bottom-nav">
+  <nav class="bottom-nav">
     <router-link
       v-for="tab in tabs"
       :key="tab.path"
@@ -61,8 +39,6 @@ onUnmounted(() => {
   align-items: stretch;
   z-index: 30;
   padding-bottom: env(safe-area-inset-bottom);
-  transform: translateZ(0);
-  will-change: transform;
 }
 
 .tab-item {

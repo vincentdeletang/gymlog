@@ -1,5 +1,5 @@
 <script setup>
-import { onMounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import BottomNav from '@/components/shared/BottomNav.vue'
 import { useUserStore } from '@/stores/useUserStore'
@@ -8,9 +8,18 @@ import { supabase } from '@/lib/supabase'
 const userStore = useUserStore()
 const router = useRouter()
 
+// Force a full remount of BottomNav when the app returns from background.
+// On Android Chrome PWAs the freeze/bfcache cycle can leave router-link
+// click handlers in a dead state — only a clean remount restores them.
+const navKey = ref(0)
+function bumpNav() {
+  if (document.visibilityState === 'visible') navKey.value++
+}
+
 onMounted(async () => {
-  // Handle Supabase magic link callback
-  // Hash router uses #/ prefix → Supabase token lands at #/access_token=...
+  document.addEventListener('visibilitychange', bumpNav)
+  window.addEventListener('pageshow', bumpNav)
+
   const hash = window.location.hash
   if (hash.includes('access_token=')) {
     const hashStr = hash.startsWith('#/') ? hash.substring(2) : hash.substring(1)
@@ -29,11 +38,16 @@ onMounted(async () => {
 
   await userStore.init()
 })
+
+onUnmounted(() => {
+  document.removeEventListener('visibilitychange', bumpNav)
+  window.removeEventListener('pageshow', bumpNav)
+})
 </script>
 
 <template>
   <div class="min-h-screen flex flex-col" style="background:#0a0e17">
     <router-view />
-    <BottomNav v-if="userStore.isAuthenticated" />
+    <BottomNav v-if="userStore.isAuthenticated" :key="navKey" />
   </div>
 </template>
