@@ -1,7 +1,8 @@
 <script setup>
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 
 const route = useRoute()
+const router = useRouter()
 
 const tabs = [
   { path: '/today',   icon: '🏋️', label: "Aujourd'hui" },
@@ -9,20 +10,29 @@ const tabs = [
   { path: '/stats',   icon: '📊', label: 'Progression' },
   { path: '/settings',icon: '⚙️', label: 'Réglages' },
 ]
+
+// Imperative push instead of <router-link> — vue-router's click interceptor
+// can stay zombie after Chrome's bfcache cycle even when the router itself is
+// alive. Calling router.push directly bypasses the interceptor entirely.
+function go(path) {
+  if (route.path === path) return
+  router.push(path).catch(() => {})
+}
 </script>
 
 <template>
   <nav class="bottom-nav">
-    <router-link
+    <button
       v-for="tab in tabs"
       :key="tab.path"
-      :to="tab.path"
+      type="button"
       class="tab-item"
       :class="{ active: route.path === tab.path }"
+      @click="go(tab.path)"
     >
       <span class="tab-icon">{{ tab.icon }}</span>
       <span class="tab-label">{{ tab.label }}</span>
-    </router-link>
+    </button>
   </nav>
 </template>
 
@@ -52,6 +62,11 @@ const tabs = [
   color: #9ca3af;
   transition: color 0.15s;
   min-height: 44px;
+  background: transparent;
+  border: none;
+  padding: 0;
+  font: inherit;
+  cursor: pointer;
 }
 
 .tab-item.active {
