@@ -1076,3 +1076,76 @@ BEGIN
   END IF;
 END $$;
 ```
+
+---
+
+## 30. Migration 028 — Backup mensuel auto par email
+
+> Edge function qui dump toutes les tables en JSON et l'envoie en pièce jointe via Resend. pg_cron déclenche ça le 1er du mois à 10h UTC.
+
+### A. Compte Resend (gratuit, 3000 mails/mois)
+
+1. Créer un compte sur https://resend.com avec ton email perso
+2. Aller dans **API Keys** → **Create API Key** → permissions « Sending access » → copier la clé `re_...`
+3. Le sender de test `onboarding@resend.dev` envoie uniquement vers l'email du compte Resend → c'est exactement notre cas, aucun domaine à configurer
+
+### B. Activer les extensions Supabase
+
+Dans Supabase Dashboard → **Database** → **Extensions** :
+- `pg_cron` (s'installe dans `pg_catalog` automatiquement)
+- `pg_net` (schema `extensions`)
+
+### C. Déployer l'Edge function
+
+Code source : `supabase/functions/monthly-backup/index.ts`
+
+1. Dashboard → **Edge Functions** → **Deploy a new function**
+2. Nom : `monthly-backup`
+3. Coller le contenu de `supabase/functions/monthly-backup/index.ts`
+4. Deploy
+5. Dans la fiche de la function → **Secrets** → ajouter :
+   - `RESEND_API_KEY` = ta clé `re_...`
+   - `BACKUP_TO_EMAIL` = ton email perso
+   - `BACKUP_FROM_EMAIL` (optionnel) = `GymLog Backup <onboarding@resend.dev>` par défaut
+6. Noter l'**URL d'invocation** affichée en haut de la fiche (forme `https://<project>.supabase.co/functions/v1/monthly-backup`) — utilisée à l'étape D
+
+### D. Stocker l'URL et la service_role key dans Vault
+
+Dashboard → **Database** → **Vault** → **Add new secret** (à faire 2 fois) :
+
+| Name | Secret |
+|---|---|
+| `gymlog_backup_url` | URL d'invocation notée à l'étape C5 |
+| `gymlog_service_role_key` | Project Settings → API → `service_role` (jamais committer cette clé) |
+
+### E. Créer le cron
+
+```sql
+do $unsched$
+begin
+  perform cron.unschedule('gymlog-monthly-backup');
+exception when others then null;
+end $unsched$;
+
+select cron.schedule(
+  'gymlog-monthly-backup',
+  '0 10 1 * *',
+  $job$
+  select net.http_post(
+    url := (select decrypted_secret from vault.decrypted_secrets where name = 'gymlog_backup_url'),
+    headers := jsonb_build_object(
+      'Content-Type', 'application/json',
+      'Authorization', 'Bearer ' || (select decrypted_secret from vault.decrypted_secrets where name = 'gymlog_service_role_key')
+    ),
+    body := '{}'::jsonb,
+    timeout_milliseconds := 30000
+  );
+  $job$
+);
+```
+
+### F. Tester
+
+- Dans la PWA : **Réglages → Données → 📧 Envoyer un backup par email** → vérifier la réception (1-2 min)
+- Vérifier le job cron : `select * from cron.job where jobname = 'gymlog-monthly-backup';`
+- Voir les dernières exécutions : `select * from cron.job_run_details order by start_time desc limit 5;`

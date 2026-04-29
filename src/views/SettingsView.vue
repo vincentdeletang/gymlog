@@ -4,6 +4,7 @@ import { useUserStore } from '@/stores/useUserStore'
 import { useWorkoutStore } from '@/stores/useWorkoutStore'
 import { useProgramStore } from '@/stores/useProgramStore'
 import { useRouter } from 'vue-router'
+import { supabase } from '@/lib/supabase'
 import { getAvailablePlates, setAvailablePlates, parsePlatesString, DEFAULT_PLATES } from '@/lib/plateCalc'
 import { buildMarkdownExport } from '@/lib/programExport'
 import ProgramExportModal from '@/components/settings/ProgramExportModal.vue'
@@ -57,6 +58,27 @@ async function exportData() {
     setTimeout(() => { exported.value = false }, 3000)
   } finally {
     exporting.value = false
+  }
+}
+
+const sendingBackup = ref(false)
+const backupSent = ref(false)
+const backupError = ref('')
+
+async function sendBackupEmail() {
+  sendingBackup.value = true
+  backupError.value = ''
+  try {
+    const { data, error } = await supabase.functions.invoke('monthly-backup')
+    if (error) throw error
+    if (data && data.ok === false) throw new Error(data.error || 'Échec inconnu')
+    backupSent.value = true
+    setTimeout(() => { backupSent.value = false }, 4000)
+  } catch (e) {
+    backupError.value = e.message || 'Erreur inconnue'
+    setTimeout(() => { backupError.value = '' }, 6000)
+  } finally {
+    sendingBackup.value = false
   }
 }
 
@@ -280,6 +302,14 @@ async function openExportModal() {
         <span v-else>📤 Exporter l'historique (JSON)</span>
       </button>
       <div class="action-note">Backup de toutes tes séances et sets.</div>
+
+      <button class="action-btn" :disabled="sendingBackup" @click="sendBackupEmail" style="margin-top: 8px">
+        <span v-if="sendingBackup">Envoi en cours…</span>
+        <span v-else-if="backupSent">✓ Mail envoyé</span>
+        <span v-else>📧 Envoyer un backup par email</span>
+      </button>
+      <div class="action-note">Dump complet (toutes les tables) envoyé à ton email. Auto le 1er du mois.</div>
+      <div v-if="backupError" class="backup-err">✗ {{ backupError }}</div>
     </div>
 
     <!-- Sign out -->
@@ -408,6 +438,13 @@ async function openExportModal() {
   font-size: 12px;
   color: #6b7280;
   margin-top: 6px;
+}
+
+.backup-err {
+  margin-top: 6px;
+  font-size: 12px;
+  color: #ef4444;
+  word-break: break-word;
 }
 
 .signout-btn {
