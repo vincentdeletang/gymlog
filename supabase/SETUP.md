@@ -1149,3 +1149,60 @@ select cron.schedule(
 - Dans la PWA : **Réglages → Données → 📧 Envoyer un backup par email** → vérifier la réception (1-2 min)
 - Vérifier le job cron : `select * from cron.job where jobname = 'gymlog-monthly-backup';`
 - Voir les dernières exécutions : `select * from cron.job_run_details order by start_time desc limit 5;`
+
+---
+
+## 31. Migration 029 — Progression cardio (overload progressif sur la durée)
+
+> Mirroring de la double progression poids (`src/lib/progression.js`) appliquée à la durée cardio. Pour la perte de gras (priorité #1) et à 136kg, le levier sûr est la **durée** (pas la vitesse/incline → charge articulaire). La logique vit dans `src/lib/cardioProgression.js` : si les 2 dernières séances ont été complétées au target courant, on suggère le palier suivant (+`progression_step_minutes`), capé à `duration_target_max_minutes`.
+>
+> Cette migration ajoute les 2 colonnes nécessaires + recalibre les targets initiaux et les plafonds par bloc.
+>
+> **Plafonds & cibles initiales** :
+> | Bloc | Target initial | Plafond |
+> |---|---|---|
+> | Tapis incliné lundi (post Pull) | 35 min | 50 min |
+> | Tapis 3% mercredi (post Lower) | 35 min | 45 min ← asymétrie post-lower |
+> | Tapis incliné vendredi (post Push) | 35 min | 50 min |
+> | Sac de boxe jeudi | 25 min | 30 min |
+> | Vélo Z2 mardi | 40 min ← alignement réalité | 50 min |
+> | Vélo Z4 mardi | 10 min | 15 min |
+
+```sql
+ALTER TABLE cardio_blocks
+  ADD COLUMN IF NOT EXISTS duration_target_max_minutes int,
+  ADD COLUMN IF NOT EXISTS progression_step_minutes int NOT NULL DEFAULT 2;
+
+DO $$
+DECLARE
+  d_lundi    UUID;
+  d_mardi    UUID;
+  d_mercredi UUID;
+  d_jeudi    UUID;
+  d_vendredi UUID;
+BEGIN
+  SELECT pd.id INTO d_lundi    FROM program_days pd JOIN programs p ON p.id=pd.program_id WHERE p.is_active=true AND pd.day_of_week=1;
+  SELECT pd.id INTO d_mardi    FROM program_days pd JOIN programs p ON p.id=pd.program_id WHERE p.is_active=true AND pd.day_of_week=2;
+  SELECT pd.id INTO d_mercredi FROM program_days pd JOIN programs p ON p.id=pd.program_id WHERE p.is_active=true AND pd.day_of_week=3;
+  SELECT pd.id INTO d_jeudi    FROM program_days pd JOIN programs p ON p.id=pd.program_id WHERE p.is_active=true AND pd.day_of_week=4;
+  SELECT pd.id INTO d_vendredi FROM program_days pd JOIN programs p ON p.id=pd.program_id WHERE p.is_active=true AND pd.day_of_week=5;
+
+  UPDATE cardio_blocks SET duration_minutes=35, duration_target_max_minutes=50
+   WHERE program_day_id=d_lundi AND name='Tapis incliné';
+
+  UPDATE cardio_blocks SET duration_minutes=35, duration_target_max_minutes=45
+   WHERE program_day_id=d_mercredi AND name='Tapis 3%';
+
+  UPDATE cardio_blocks SET duration_minutes=35, duration_target_max_minutes=50
+   WHERE program_day_id=d_vendredi AND name='Tapis incliné';
+
+  UPDATE cardio_blocks SET duration_minutes=40, duration_target_max_minutes=50
+   WHERE program_day_id=d_mardi AND name='Zone 2 (FC 120-140)';
+
+  UPDATE cardio_blocks SET duration_target_max_minutes=15
+   WHERE program_day_id=d_mardi AND name='Zone 4 (FC 160-175)';
+
+  UPDATE cardio_blocks SET duration_target_max_minutes=30
+   WHERE program_day_id=d_jeudi AND name='Sac de boxe';
+END $$;
+```

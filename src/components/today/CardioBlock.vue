@@ -1,6 +1,7 @@
 <script setup>
 import { computed, ref } from 'vue'
 import { useWorkoutStore } from '@/stores/useWorkoutStore'
+import { suggestedDuration, durationDelta } from '@/lib/cardioProgression'
 import CardioDetailModal from './CardioDetailModal.vue'
 
 const props = defineProps({
@@ -13,12 +14,17 @@ const done = computed(() => workoutStore.isCardioDone(props.block.id))
 const log  = computed(() => workoutStore.getCardioLog(props.block.id))
 const detailOpen = ref(false)
 
-const summary = computed(() => {
-  const l = log.value
-  if (!l) return null
-  if (l.duration_seconds) return `${Math.round(l.duration_seconds / 60)} min`
-  return null
-})
+const suggestion = computed(() =>
+  suggestedDuration(workoutStore.getPreviousCardioLogs(props.block.id), props.block)
+)
+
+const targetMin = computed(() => suggestion.value?.duration ?? props.block.duration_minutes)
+
+const loggedMin = computed(() =>
+  log.value?.duration_seconds ? Math.round(log.value.duration_seconds / 60) : null
+)
+
+const delta = computed(() => durationDelta(log.value?.duration_seconds, targetMin.value))
 
 function toggleDone() {
   if (done.value) workoutStore.unmarkCardioDone(props.block.id)
@@ -39,8 +45,18 @@ function onDetailSave(details) {
         <div class="block-text">
           <div class="block-name">{{ block.name }}</div>
           <div class="block-target">
-            {{ block.duration_minutes }} min cible
-            <span v-if="summary" class="block-actual">· {{ summary }}</span>
+            <span class="target-min">{{ targetMin }} min</span>
+            <span v-if="suggestion?.increased" class="cardio-suggestion increased">
+              ↑ +{{ block.progression_step_minutes ?? 2 }} min
+            </span>
+            <span v-else-if="suggestion?.atMax && !suggestion?.increased" class="cardio-suggestion atmax">
+              🎯 max
+            </span>
+            <span v-if="loggedMin != null" class="block-actual" :class="{ over: delta > 0, under: delta < 0 }">
+              · {{ loggedMin }} min
+              <span v-if="delta > 0">(+{{ delta }})</span>
+              <span v-else-if="delta < 0">({{ delta }})</span>
+            </span>
           </div>
         </div>
       </div>
@@ -50,7 +66,7 @@ function onDetailSave(details) {
     </div>
 
     <button class="detail-link" @click="detailOpen = true">
-      {{ summary ? '✏️ Modifier durée' : '＋ Logger durée' }}
+      {{ loggedMin != null ? '✏️ Modifier durée' : '＋ Logger durée' }}
     </button>
 
     <div v-if="block.notes" class="block-notes">💡 {{ block.notes }}</div>
@@ -123,11 +139,42 @@ function onDetailSave(details) {
 .block-target {
   font-size: 12px;
   color: #9ca3af;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.target-min {
+  font-weight: 600;
+}
+
+.cardio-suggestion {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  padding: 1px 6px;
+  border-radius: 5px;
+}
+
+.cardio-suggestion.increased {
+  color: #10b981;
+  background: rgba(16, 185, 129, 0.12);
+}
+
+.cardio-suggestion.atmax {
+  color: #f59e0b;
+  background: rgba(245, 158, 11, 0.12);
 }
 
 .block-actual {
   color: #10b981;
   font-weight: 600;
+}
+
+.block-actual.under {
+  color: #f59e0b;
 }
 
 .done-btn {
