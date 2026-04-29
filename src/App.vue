@@ -8,17 +8,36 @@ import { supabase } from '@/lib/supabase'
 const userStore = useUserStore()
 const router = useRouter()
 
-// Force a full remount of BottomNav when the app returns from background.
-// On Android Chrome PWAs the freeze/bfcache cycle can leave router-link
-// click handlers in a dead state — only a clean remount restores them.
+// Android Chrome PWAs suspend the renderer after ~1s in background, leaving
+// vue-router in a zombie state where pushes don't trigger re-renders. The
+// only reliable recovery is a full reload — session + workout state are in
+// Supabase/localStorage so nothing is lost.
 const navKey = ref(0)
-function bumpNav() {
-  if (document.visibilityState === 'visible') navKey.value++
+let hiddenAt = null
+const RELOAD_AFTER_MS = 1000
+
+function onVisibility() {
+  if (document.visibilityState === 'hidden') {
+    hiddenAt = Date.now()
+    return
+  }
+  if (document.visibilityState !== 'visible') return
+  const elapsed = hiddenAt ? Date.now() - hiddenAt : 0
+  hiddenAt = null
+  if (elapsed > RELOAD_AFTER_MS) {
+    window.location.reload()
+    return
+  }
+  navKey.value++
+}
+
+function onPageShow(event) {
+  if (event.persisted) window.location.reload()
 }
 
 onMounted(async () => {
-  document.addEventListener('visibilitychange', bumpNav)
-  window.addEventListener('pageshow', bumpNav)
+  document.addEventListener('visibilitychange', onVisibility)
+  window.addEventListener('pageshow', onPageShow)
 
   const hash = window.location.hash
   if (hash.includes('access_token=')) {
@@ -40,8 +59,8 @@ onMounted(async () => {
 })
 
 onUnmounted(() => {
-  document.removeEventListener('visibilitychange', bumpNav)
-  window.removeEventListener('pageshow', bumpNav)
+  document.removeEventListener('visibilitychange', onVisibility)
+  window.removeEventListener('pageshow', onPageShow)
 })
 </script>
 
