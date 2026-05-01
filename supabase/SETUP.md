@@ -1206,3 +1206,213 @@ BEGIN
    WHERE program_day_id=d_jeudi AND name='Sac de boxe';
 END $$;
 ```
+
+---
+
+## 32. Migration 030 — Simplification volume bras (adhérence + rééquilibrage triceps>biceps)
+
+> **Vendredi** :
+> - Drop **Kickbacks haltères** — non senti par l'utilisateur, exo peu efficace pour lui (resistance peak en position raccourcie = pic de charge où le triceps a le moins de levier)
+> - Drop **Farmer's carry** — 1 seul haltère dispo à la maison + pickup risqué pour lombaires faibles à 136kg sans trap bar. Couverture anti-extension/anti-flexion latérale assurée par dead bug (mercredi) + plank
+> - **Plank** 3 → 2 sets — compromis adhérence / stabilisation lombaire post-développé
+> - **Extensions triceps barre EZ** renommé **Extensions overhead barre EZ** — clarification, l'exo réellement effectué est de l'overhead (banc 85-90°), pas du skull crusher. La description est étoffée pour préciser l'angle correct (≠ 30° du développé incliné)
+> - Ajout **Barre au front** (skull crusher EZ, 3×10-12) — complément en position mi-longueur sur la longue portion du triceps. Avec l'overhead = couverture biomécanique complète (étirement max + mi-longueur)
+>
+> **Lundi** :
+> - Drop **Curl haltère concentré** — compression du volume biceps en phase déficit (cf. CLAUDE.md "compresser à 3-4 exos suffit pour préserver")
+> - **Curl barre EZ (supination)** 4 → 3 sets — rééquilibrage volume biceps/triceps. Le triceps représente ~60-65% du volume du bras vs ~30-35% pour le biceps : pour l'objectif "gros bras", le triceps doit recevoir plus de stimulus direct que le biceps
+>
+> **Bilan post-migration** :
+> - Triceps direct : 4+3 = **7 sets/sem** (vs 4 avant)
+> - Biceps direct : 3+3 = **6 sets/sem** (vs 9 avant)
+> - Vendredi : **13 sets main** (vs 20 avant) → -7 sets, ~15 min gagnées sur la séance pour adhérence
+
+**⚠️ Note** : cette migration supprime des exos qui ont des `set_logs` historiques (curl concentré, kickbacks, farmer's carry). Il faut donc supprimer les logs avant l'exo (FK constraint), ce qui détruit l'historique. Même pattern qu'utilisé par les migrations 010 et 011.
+
+```sql
+DO $$
+DECLARE d_lundi UUID;
+BEGIN
+  SELECT pd.id INTO d_lundi FROM program_days pd JOIN programs p ON p.id=pd.program_id
+  WHERE p.is_active=true AND pd.day_of_week=1;
+
+  DELETE FROM set_logs
+   WHERE exercise_id IN (
+     SELECT id FROM exercises
+     WHERE program_day_id=d_lundi AND name='Curl haltère concentré'
+   );
+
+  DELETE FROM exercises
+   WHERE program_day_id=d_lundi AND name='Curl haltère concentré';
+
+  UPDATE exercises SET sets_target=3
+   WHERE program_day_id=d_lundi AND name='Curl barre EZ (supination)';
+END $$;
+
+DO $$
+DECLARE d_vendredi UUID; bar_ez UUID;
+BEGIN
+  SELECT pd.id INTO d_vendredi FROM program_days pd JOIN programs p ON p.id=pd.program_id
+  WHERE p.is_active=true AND pd.day_of_week=5;
+  SELECT id INTO bar_ez FROM bars WHERE name='Barre EZ';
+
+  DELETE FROM set_logs
+   WHERE exercise_id IN (
+     SELECT id FROM exercises
+     WHERE program_day_id=d_vendredi
+       AND name IN ('Kickbacks haltères', 'Farmer''s carry')
+   );
+
+  DELETE FROM exercises
+   WHERE program_day_id=d_vendredi AND name='Kickbacks haltères';
+
+  DELETE FROM exercises
+   WHERE program_day_id=d_vendredi AND name='Farmer''s carry';
+
+  UPDATE exercises SET sets_target=2
+   WHERE program_day_id=d_vendredi AND name='Plank';
+
+  UPDATE exercises
+     SET name='Extensions overhead barre EZ',
+         notes='EXÉCUTION : Assis sur le banc, dossier le plus VERTICAL possible (~85-90°, PAS 30° comme le développé incliné — sinon les bras ne peuvent pas vraiment passer au-dessus de la tête et tu perds le bénéfice principal). Tenir la barre EZ bras tendus au-dessus du crâne, prise pronation sur les courbes intérieures. COUDES POINTÉS VERS LE PLAFOND, fixes : ils ne bougent pas, ne s''écartent pas vers l''extérieur. Descendre la barre derrière la nuque en pliant uniquement les coudes. Remonter en extension contrôlée, pas de verrouillage brutal en haut. CIBLE : longue portion du triceps en position étirée maximale (épaule en flexion 180° + coude fléchi = double étirement de la longue portion qui croise les 2 articulations).'
+   WHERE program_day_id=d_vendredi AND name='Extensions triceps barre EZ';
+
+  IF NOT EXISTS (SELECT 1 FROM exercises WHERE program_day_id=d_vendredi AND name='Barre au front') THEN
+    INSERT INTO exercises (program_day_id, name, order_index, sets_target, reps_target, is_bodyweight, notes, section, bar_id)
+    VALUES (d_vendredi, 'Barre au front', 8, 3, '10-12', false,
+      'EXÉCUTION : Allongé sur le banc PLAT (0°). Tenir la barre EZ bras tendus, légèrement INCLINÉS VERS LA TÊTE (pas strictement perpendiculaires au sol — ça maintient la tension sur le triceps en haut et réduit le levier sur le coude). Coudes fixes, pointés vers le plafond, ne pas les écarter latéralement. Descendre la barre vers le HAUT du front : s''arrêter ~5cm AVANT de toucher le front (préserver les coudes, pas besoin de full ROM). Remonter en extension contrôlée sans verrouillage brutal. CIBLE : longue portion du triceps en position mi-longueur (complément de l''overhead qui couvre l''étirement max). ATTENTION COUDES : exo très exigeant pour les tendons. Charge MODÉRÉE, jamais forcer si douleur tendineuse. Si le coude souffre après 2-3 séances, on ré-évalue.',
+      'main', bar_ez);
+  END IF;
+END $$;
+```
+
+---
+
+## 33. Migration 031 — Lundi : simplification dos (alignement objectifs)
+
+> Suite à la clarification des objectifs (cf. CLAUDE.md mis à jour : bras = seul muscle visé en hypertrophie, le reste = entretien santé/fonction), le bloc dos lundi (10 sets directs sur 3 exos) était sur-dimensionné. Il y avait aussi des problèmes spécifiques :
+>
+> - **Rowing barre** : amplitude limitée par le stockage abdominal du user (la barre touche le ventre avant rétraction scapulaire complète) → faux travail. Problème morphologique connu chez les profils 1m97/136kg+ avec abdo prononcé.
+> - **Rowing haltère unilatéral** : pas senti par le user, redondant avec rowing barre.
+> - **Pulldown élastique** : conflit avec préférence user (pas d'élastique pour la muscu, réservé à la rehab).
+>
+> **Solution** : drop des 3 exos dos, remplacement par UN SEUL exo bien fait pour le profil :
+>
+> - **Chest-supported row haltère 4×8-12 unilatéral** : poitrine appuyée sur banc incliné 30°, élimine totalement le problème du bide, dos protégé (zéro stress lombaire), zéro momentum possible (mind-muscle ++), unilatéral utilisant son seul haltère. C'est l'exo standard recommandé pour les profils "haut + lourd + abdo" (Nippard, Israetel, Cavaliere).
+>
+> **Bilan** :
+> - Lundi main : 5 exos → **3 exos** (1 row + 2 curls), gain ~15-20 min sur la séance
+> - Volume dos direct : 10 sets → **4 sets** (alignement "minimum efficace pour santé/posture/biceps indirect")
+> - Volume biceps : inchangé (3 EZ + 3 hammer = 6 directs + ~3-4 indirects via le row)
+>
+> **⚠️ Note** : cette migration supprime des exos qui ont des `set_logs` historiques (rowing barre, rowing haltère unilatéral). Il faut donc supprimer les logs avant l'exo (FK constraint), ce qui détruit l'historique. Même pattern qu'utilisé par les migrations 010, 011, 030.
+
+```sql
+DO $$
+DECLARE d_lundi UUID; bar_haltere UUID;
+BEGIN
+  SELECT pd.id INTO d_lundi FROM program_days pd JOIN programs p ON p.id=pd.program_id
+  WHERE p.is_active=true AND pd.day_of_week=1;
+  SELECT id INTO bar_haltere FROM bars WHERE name='Haltère';
+
+  DELETE FROM set_logs
+   WHERE exercise_id IN (
+     SELECT id FROM exercises
+     WHERE program_day_id=d_lundi
+       AND name IN ('Rowing barre (barres de sécurité)', 'Rowing haltère unilatéral', 'Pulldown élastique')
+   );
+
+  DELETE FROM exercises
+   WHERE program_day_id=d_lundi
+     AND name IN ('Rowing barre (barres de sécurité)', 'Rowing haltère unilatéral', 'Pulldown élastique');
+
+  IF NOT EXISTS (SELECT 1 FROM exercises WHERE program_day_id=d_lundi AND name='Chest-supported row haltère') THEN
+    INSERT INTO exercises (program_day_id, name, order_index, sets_target, reps_target, is_bodyweight, notes, section, bar_id, is_per_side)
+    VALUES (d_lundi, 'Chest-supported row haltère', 5, 4, '8-12', false,
+      'SETUP : Banc inclinable réglé à ~30° (dossier vers le haut). Haltère posé au sol à côté/sous l''extrémité haute du banc. Te positionner FACE CONTRE le banc : poitrine + ventre appuyés sur le dossier. Pieds au sol stables. Front sur le bord haut du banc, regard légèrement vers le haut.
+
+EXÉCUTION : Une main attrape l''haltère, bras pendant librement = étirement complet du dos en bas. Autre main tient le bord du banc pour stabiliser. TIRER l''haltère vers la HANCHE (pas vers la poitrine) en pliant le coude ET en RÉTRACTANT l''omoplate. Pause brève en haut, sentir la contraction milieu du dos. DESCENTE LENTE 3-4s jusqu''à étirement complet. Zéro momentum, buste immobile.
+
+POINTS CLÉS :
+- COUDE PROCHE DU CORPS (pas écarté) → grand dorsal + rhomboïdes
+- INITIER avec l''omoplate, le bras suit
+- ÉTIREMENT COMPLET en bas — essentiel
+- 3s descente excentrique
+- Si tu sens biceps et pas dos = trop lourd ou mauvaise initiation
+
+UNILATÉRAL : tous les sets d''un côté puis l''autre, ou alterner. PREMIÈRE SÉANCE : charge légère, mater des vidéos ("dumbbell chest-supported row" / "incline dumbbell row 30 degrees" — Nippard ou Cavaliere).
+
+ATTENTION BIDE : c''est exactement pour ça qu''on remplace le rowing barre — ici le banc te sépare du sol, plus aucune limitation d''amplitude.',
+      'main', bar_haltere, true);
+  END IF;
+
+  UPDATE exercises SET order_index=6
+   WHERE program_day_id=d_lundi AND name='Curl barre EZ (supination)';
+
+  UPDATE exercises SET order_index=7
+   WHERE program_day_id=d_lundi AND name='Curl haltères hammer';
+END $$;
+```
+
+---
+
+## 34. Migration 032 — Trim final aligné objectifs + ajout marche tapis samedi
+
+> Audit final post-clarification objectifs (cf. CLAUDE.md). Drop des exos marginaux pour les objectifs réels du user (bras hypertrophie + santé/fonction pour le reste), ajout d'un cardio NEAT samedi.
+>
+> **DROPS (5 exos)** — tous marginaux pour les objectifs réels :
+> - **Vendredi : Élévations latérales haltère** : pure esthétique (delt latéral / V-taper). Profil user = naturellement large (1m97/136kg, carrure imposante) → ajouter largeur d'épaule serait esthétiquement contre-productif. Aucun bénéfice santé/fonction.
+> - **Mercredi : Fentes marchées haltères** : redondance partielle avec goblet squat. Densité osseuse + insuline + NEAT couverts par goblet + SLDL + mollets. Friction adhérence (setup chiant) pour gain marginal.
+> - **Samedi : Respiration diaphragmatique** : utile mais cosmétique côté programme.
+> - **Samedi : 90/90 hip switch** : redondance avec Pigeon modifié.
+> - **Lundi + Vendredi : Pendulaires de Codman** : rehab passif, user ne le sent pas. Stretch doorway (gardé) couvre l'étirement épaule G ; les 2 actifs (rotations externes + face pulls) restent intacts.
+>
+> **ADD :**
+> - **Samedi cardio : Marche tapis** 35 min (cible max 50) : NEAT structuré, zéro interférence muscu, soutenable en déficit. Préférée à la marche dehors car loggable → adhérence.
+>
+> **Bilan :** ~20 min/sem de muscu en moins (hors cardio samedi), 5 exos en moins, +35 min de cardio Z1-Z2 (marche tapis). Aucune perte sur les priorités réelles.
+>
+> **⚠️ Note** : cette migration supprime des exos qui ont des `set_logs` historiques. Suppression des logs préalable (FK constraint), même pattern qu'utilisé par les migrations 010, 011, 030, 031.
+
+```sql
+DO $$
+DECLARE
+  d_lundi UUID; d_mercredi UUID; d_vendredi UUID; d_samedi UUID;
+BEGIN
+  SELECT pd.id INTO d_lundi    FROM program_days pd JOIN programs p ON p.id=pd.program_id WHERE p.is_active=true AND pd.day_of_week=1;
+  SELECT pd.id INTO d_mercredi FROM program_days pd JOIN programs p ON p.id=pd.program_id WHERE p.is_active=true AND pd.day_of_week=3;
+  SELECT pd.id INTO d_vendredi FROM program_days pd JOIN programs p ON p.id=pd.program_id WHERE p.is_active=true AND pd.day_of_week=5;
+  SELECT pd.id INTO d_samedi   FROM program_days pd JOIN programs p ON p.id=pd.program_id WHERE p.is_active=true AND pd.day_of_week=6;
+
+  DELETE FROM set_logs
+   WHERE exercise_id IN (
+     SELECT id FROM exercises WHERE
+       (program_day_id = d_vendredi AND name = 'Élévations latérales haltères')
+       OR (program_day_id = d_mercredi AND name = 'Fentes marchées haltères')
+       OR (program_day_id = d_samedi AND name IN ('Respiration diaphragmatique', '90/90 hip switch'))
+       OR (program_day_id IN (d_lundi, d_vendredi) AND name = 'Pendulaires de Codman')
+   );
+
+  DELETE FROM exercises
+   WHERE program_day_id = d_vendredi AND name = 'Élévations latérales haltères';
+  DELETE FROM exercises
+   WHERE program_day_id = d_mercredi AND name = 'Fentes marchées haltères';
+  DELETE FROM exercises
+   WHERE program_day_id = d_samedi AND name IN ('Respiration diaphragmatique', '90/90 hip switch');
+  DELETE FROM exercises
+   WHERE program_day_id IN (d_lundi, d_vendredi) AND name = 'Pendulaires de Codman';
+END $$;
+
+DO $$
+DECLARE d_samedi UUID;
+BEGIN
+  SELECT pd.id INTO d_samedi FROM program_days pd JOIN programs p ON p.id=pd.program_id
+  WHERE p.is_active=true AND pd.day_of_week=6;
+
+  IF NOT EXISTS (SELECT 1 FROM cardio_blocks WHERE program_day_id=d_samedi AND name='Marche tapis') THEN
+    INSERT INTO cardio_blocks (program_day_id, name, duration_minutes, duration_target_max_minutes, progression_step_minutes, order_index, notes)
+    VALUES (d_samedi, 'Marche tapis', 35, 50, 2, 1,
+      'Récup active + NEAT structuré pour la perte de gras (priorité #1). Plat ou très légère pente (3% max). Zone 1-2 (FC ~110-120, conversation facile). Zéro stress muscu, zéro interférence avec les séances de la semaine, soutenable en déficit. Préférée à la marche dehors car loggable = adhérence supérieure.');
+  END IF;
+END $$;
+```
