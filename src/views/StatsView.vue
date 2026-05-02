@@ -21,6 +21,7 @@ const weeklyData = ref([])
 const selectedExercise = ref('')
 const loadingChart = ref(false)
 const chartData = ref({ labels: [], values: [], exerciseName: '' })
+const monthlySessions = ref({ current: 0, planned: 0, previous: 0 })
 
 const exercisesForChart = computed(() =>
   programStore.exercises.filter(e => !e.is_bodyweight && e.section !== 'rehab')
@@ -30,6 +31,52 @@ onMounted(async () => {
   if (!programStore.exercises.length) await programStore.fetchActiveProgram()
   recentSessions.value = await workoutStore.fetchHistory(30)
   weeklyData.value = await workoutStore.fetchWeeklyVolume(8)
+  await loadMonthlyStats()
+})
+
+function localISO(d) {
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
+
+async function loadMonthlyStats() {
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const monthStart = new Date(today.getFullYear(), today.getMonth(), 1)
+  const prevMonthStart = new Date(today.getFullYear(), today.getMonth() - 1, 1)
+  const prevMonthEnd = new Date(today.getFullYear(), today.getMonth(), 0)
+
+  const [currentDates, prevDates] = await Promise.all([
+    workoutStore.fetchActiveDates(localISO(monthStart), localISO(today)),
+    workoutStore.fetchActiveDates(localISO(prevMonthStart), localISO(prevMonthEnd)),
+  ])
+
+  // Pro-rata exact: count each elapsed day whose day_of_week maps to a non-rest program_day.
+  // Beats "× full weeks" for honest mid-week reads — no jump from day 6 to day 7.
+  const trainingDows = new Set(
+    programStore.programDays
+      .filter(d => d.type !== 'rest')
+      .map(d => d.day_of_week)
+  )
+  let planned = 0
+  const cursor = new Date(monthStart)
+  while (cursor <= today) {
+    if (trainingDows.has(cursor.getDay())) planned++
+    cursor.setDate(cursor.getDate() + 1)
+  }
+
+  monthlySessions.value = {
+    current: currentDates.size,
+    planned,
+    previous: prevDates.size,
+  }
+}
+
+const monthlySubLabel = computed(() => {
+  const n = monthlySessions.value.previous
+  return `${n} séance${n > 1 ? 's' : ''} mois précédent`
 })
 
 async function loadWeightData() {
@@ -108,6 +155,17 @@ function getWeekNumber(d) {
   <div class="stats-view">
     <div class="view-header">
       <h1>Progression</h1>
+    </div>
+
+    <!-- Monthly sessions vs planned -->
+    <div class="section-block">
+      <StatCard
+        label="Séances ce mois"
+        :value="`${monthlySessions.current} / ${monthlySessions.planned}`"
+        :sub="monthlySubLabel"
+        icon="📅"
+        color="#10b981"
+      />
     </div>
 
     <!-- Deload alert (renders only if signals trigger) -->

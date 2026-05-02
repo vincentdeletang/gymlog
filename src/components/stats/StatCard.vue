@@ -4,6 +4,7 @@ defineProps({
   value: [String, Number],
   icon: String,
   color: { type: String, default: '#3b82f6' },
+  sub: String,
 })
 </script>
 
@@ -12,6 +13,7 @@ defineProps({
     <div class="stat-icon">{{ icon }}</div>
     <div class="stat-value" :style="{ color }">{{ value }}</div>
     <div class="stat-label">{{ label }}</div>
+    <div v-if="sub" class="stat-sub">{{ sub }}</div>
   </div>
 </template>
 
@@ -46,5 +48,12 @@ defineProps({
   text-transform: uppercase;
   letter-spacing: 0.5px;
   font-weight: 600;
+}
+
+.stat-sub {
+  font-size: 11px;
+  color: #6b7280;
+  font-weight: 500;
+  margin-top: 2px;
 }
 </style>

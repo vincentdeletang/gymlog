@@ -575,6 +575,36 @@ export const useWorkoutStore = defineStore('workout', () => {
     return counts
   }
 
+  // Distinct session dates with at least one set_log OR cardio_block_log in [from, to].
+  // A "real" session = has actual logged data, not just an empty workout_sessions row.
+  async function fetchActiveDates(from, to) {
+    const userStore = useUserStore()
+    const [setRes, cardioRes] = await Promise.all([
+      supabase
+        .from('set_logs')
+        .select('workout_sessions!inner(user_id, session_date)')
+        .eq('workout_sessions.user_id', userStore.user.id)
+        .gte('workout_sessions.session_date', from)
+        .lte('workout_sessions.session_date', to),
+      supabase
+        .from('cardio_block_logs')
+        .select('workout_sessions!inner(user_id, session_date)')
+        .eq('workout_sessions.user_id', userStore.user.id)
+        .gte('workout_sessions.session_date', from)
+        .lte('workout_sessions.session_date', to),
+    ])
+    const dates = new Set()
+    for (const r of (setRes.data ?? [])) {
+      const d = r.workout_sessions?.session_date
+      if (d) dates.add(d)
+    }
+    for (const r of (cardioRes.data ?? [])) {
+      const d = r.workout_sessions?.session_date
+      if (d) dates.add(d)
+    }
+    return dates
+  }
+
   async function fetchWeeklyVolume(weeks = 8) {
     const userStore = useUserStore()
     const since = new Date()
@@ -671,7 +701,7 @@ export const useWorkoutStore = defineStore('workout', () => {
     getPreviousCardioLogs,
     checkAndRecordPR, epleyE1RM, computeSessionStats, updateSessionNotes,
     fetchHistory, fetchSessionDetail, fetchSessionCardio,
-    fetchWeightProgress, fetchWeeklyVolume, fetchRIRStats,
+    fetchWeightProgress, fetchWeeklyVolume, fetchRIRStats, fetchActiveDates,
     fetchCurrentWeekVolumeByMuscle, fetchDeloadCandidates, fetchAllTimePRs,
   }
 })
