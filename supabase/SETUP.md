@@ -1443,3 +1443,27 @@ Si tu sens le biceps = allège et pense "omoplate d''abord".'
      AND name = 'Chest-supported row haltère';
 END $$;
 ```
+
+## 36. Migration 034 — Suppression du cardio "marche" redondant avec la marche bureau
+
+> Le user ajoute une marche quotidienne devant l'ordi (~1h30-2h/jour) comme moteur principal de la perte de gras (priorité #1). À 136 kg ≈ 250-350 kcal/h, soit plus que tout le cardio structuré de la semaine, sans friction ni pic de faim. Le cardio "marche" en steady-state devient donc redondant et nuit à l'adhérence (séances rallongées, faim post-cardio). On vire les 3 tapis post-muscu (lundi/mercredi/vendredi) + la marche tapis du samedi. On garde la boxe (mardi, plaisir + intensité) et le vélo (jeudi, plaisir + Zone 4 = stimulus cœur/longévité). Logs cardio supprimés en cascade.
+
+```sql
+DO $$
+DECLARE
+  d_lundi    UUID;
+  d_mercredi UUID;
+  d_vendredi UUID;
+  d_samedi   UUID;
+BEGIN
+  SELECT pd.id INTO d_lundi    FROM program_days pd JOIN programs p ON p.id=pd.program_id WHERE p.is_active=true AND pd.day_of_week=1;
+  SELECT pd.id INTO d_mercredi FROM program_days pd JOIN programs p ON p.id=pd.program_id WHERE p.is_active=true AND pd.day_of_week=3;
+  SELECT pd.id INTO d_vendredi FROM program_days pd JOIN programs p ON p.id=pd.program_id WHERE p.is_active=true AND pd.day_of_week=5;
+  SELECT pd.id INTO d_samedi   FROM program_days pd JOIN programs p ON p.id=pd.program_id WHERE p.is_active=true AND pd.day_of_week=6;
+
+  DELETE FROM cardio_blocks WHERE program_day_id = d_lundi    AND name = 'Tapis incliné';
+  DELETE FROM cardio_blocks WHERE program_day_id = d_mercredi AND name = 'Tapis 3%';
+  DELETE FROM cardio_blocks WHERE program_day_id = d_vendredi AND name = 'Tapis incliné';
+  DELETE FROM cardio_blocks WHERE program_day_id = d_samedi   AND name = 'Marche tapis';
+END $$;
+```
