@@ -1489,3 +1489,33 @@ BEGIN
      AND name IN ('Rotations externes élastique', 'Face pulls élastique');
 END $$;
 ```
+
+---
+
+## 38. Migration 036 — Raccourcir notes triceps vendredi
+
+> Le user a assimilé l'exécution des 2 exos triceps (overhead 22 kg testé, sensations triceps nettes, aucune douleur épaule/coude) : on retire le tutoriel détaillé et on garde l'essentiel du quotidien — l'**angle du banc** (le cue le plus facile à oublier et qui change tout) + 1-2 cues clés. Pour la barre au front on conserve la mise en garde coudes (sécurité tendineuse). Aucun set_log touché (seul `notes` change).
+
+```sql
+DO $$
+DECLARE
+  d_vendredi UUID;
+BEGIN
+  SELECT pd.id INTO d_vendredi
+    FROM program_days pd
+    JOIN programs p ON p.id = pd.program_id
+   WHERE p.is_active = true AND pd.day_of_week = 5;
+
+  UPDATE exercises
+     SET notes = 'Dossier VERTICAL (~85-90°). Barre derrière la nuque, coudes pointés au plafond et fixes (ne pas les écarter). Cible : longue portion étirée.'
+   WHERE program_day_id = d_vendredi
+     AND name = 'Extensions overhead barre EZ';
+
+  UPDATE exercises
+     SET notes = 'Banc PLAT (0°). Bras légèrement inclinés vers la tête, coudes fixes pointés au plafond. Descendre vers le front, s''arrêter ~5cm avant.
+
+Coudes sensibles : charge modérée, jamais forcer si douleur tendineuse.'
+   WHERE program_day_id = d_vendredi
+     AND name = 'Barre au front';
+END $$;
+```
