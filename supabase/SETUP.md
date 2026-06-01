@@ -1467,3 +1467,25 @@ BEGIN
   DELETE FROM cardio_blocks WHERE program_day_id = d_samedi   AND name = 'Marche tapis';
 END $$;
 ```
+
+---
+
+## 37. Migration 035 — Rehab épaule → dose d'entretien (prehab)
+
+> L'épaule gauche va nettement mieux (rarement sentie). Le protocole rehab a fait son travail : on passe de dose thérapeutique à dose d'entretien plutôt que de supprimer le bloc (récidive classique chez profil 136 kg + poussée + douleurs récurrentes ; objectifs #2 santé/posture et #3 éviter blessures prioritaires sur l'hypertrophie). Rotations externes et face pulls passent de 3×15 → 2×15 (lundi + vendredi). Le stretch doorway (2×30s) reste tel quel : utile pour la posture indépendamment de la douleur, et programmé plutôt que "à la demande" car le user ne tient pas les habitudes non-loggables. Aucun set_log supprimé (seul `sets_target` change).
+
+```sql
+DO $$
+DECLARE
+  d_lundi    UUID;
+  d_vendredi UUID;
+BEGIN
+  SELECT pd.id INTO d_lundi    FROM program_days pd JOIN programs p ON p.id=pd.program_id WHERE p.is_active=true AND pd.day_of_week=1;
+  SELECT pd.id INTO d_vendredi FROM program_days pd JOIN programs p ON p.id=pd.program_id WHERE p.is_active=true AND pd.day_of_week=5;
+
+  UPDATE exercises
+     SET sets_target = 2
+   WHERE program_day_id IN (d_lundi, d_vendredi)
+     AND name IN ('Rotations externes élastique', 'Face pulls élastique');
+END $$;
+```
