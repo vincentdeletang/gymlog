@@ -190,8 +190,6 @@ function getWeekNumber(d) {
       <div class="stats-grid">
         <StatCard label="Séances" :value="totalSessions" icon="📋" color="#3b82f6" />
         <StatCard label="Meilleur streak" :value="userStore.streakBest" icon="🔥" color="#f59e0b" />
-        <StatCard label="XP total" :value="userStore.xp" icon="⚡" color="#8b5cf6" />
-        <StatCard label="Niveau" :value="userStore.currentLevel.name" icon="🏆" color="#10b981" />
       </div>
     </div>
 

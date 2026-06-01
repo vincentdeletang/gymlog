@@ -1,7 +1,7 @@
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import LevelBar from '@/components/shared/LevelBar.vue'
+import StreakBar from '@/components/shared/StreakBar.vue'
 import ExerciseRow from '@/components/today/ExerciseRow.vue'
 import SetLogModal from '@/components/today/SetLogModal.vue'
 import CardioBlock from '@/components/today/CardioBlock.vue'
@@ -28,7 +28,6 @@ const { playSuccess } = useAudio()
 
 const loading = ref(true)
 const celebrating = ref(false)
-const xpEarned = ref(0)
 const earnedStreak = ref(0)
 const sessionStats = ref(null)
 
@@ -242,14 +241,12 @@ async function deleteSet() {
 }
 
 async function finishSession() {
-  const xp = programStore.activeProgramDay?.xp_reward ?? 0
   const exercisesById = Object.fromEntries(
     programStore.activeExercises.map(e => [e.id, e])
   )
   const stats = workoutStore.computeSessionStats(exercisesById)
-  const ok = await workoutStore.completeSession(xp)
+  const ok = await workoutStore.completeSession()
   if (ok) {
-    xpEarned.value = xp
     earnedStreak.value = userStore.streak
     sessionStats.value = stats
     celebrating.value = true
@@ -299,7 +296,7 @@ watch(mobilityDone, done => { if (done) open.value.mobility = false })
 
 <template>
   <div class="today-view">
-    <LevelBar />
+    <StreakBar />
 
     <!-- Header -->
     <div class="today-header">
@@ -495,8 +492,8 @@ watch(mobilityDone, done => { if (done) open.value.mobility = false })
         <template v-if="inCatchUpMode">TERMINER LA SÉANCE DU {{ formatShortDate(targetDate).toUpperCase() }}</template>
         <template v-else-if="isRestDay">TERMINER LA RÉCUP</template>
         <template v-else>TERMINER</template>
-        <span class="xp-preview">
-          <template v-if="!isCardio">{{ setsProgress.done }}/{{ setsProgress.total }} séries · </template>+{{ programStore.activeProgramDay?.xp_reward ?? 0 }} XP
+        <span v-if="!isCardio" class="finish-sub">
+          {{ setsProgress.done }}/{{ setsProgress.total }} séries
         </span>
       </button>
     </div>
@@ -547,7 +544,6 @@ watch(mobilityDone, done => { if (done) open.value.mobility = false })
     <!-- Celebration overlay -->
     <CelebrationOverlay
       v-if="celebrating"
-      :xp-earned="xpEarned"
       :streak-count="earnedStreak"
       :stats="sessionStats"
       @close="celebrating = false"
@@ -888,7 +884,7 @@ watch(mobilityDone, done => { if (done) open.value.mobility = false })
   transform: scale(0.98);
 }
 
-.xp-preview {
+.finish-sub {
   font-size: 14px;
   opacity: 0.85;
   font-weight: 600;

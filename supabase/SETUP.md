@@ -1519,3 +1519,15 @@ Coudes sensibles : charge modérée, jamais forcer si douleur tendineuse.'
      AND name = 'Barre au front';
 END $$;
 ```
+
+---
+
+## 39. Migration 037 — Suppression du système XP / niveaux
+
+> La gamification XP + ladder de niveaux (Recrue → Légende) est cosmétique et sans valeur pour un usage solo : pas de classement ni d'enjeu, seuils arbitraires, "gamable" par le user qui code lui-même l'app. On la retire entièrement. On **garde le streak** (🔥) : seul mécanisme appuyé par la science du comportement (aversion à la perte) et aligné sur la contrainte n°1 du user = l'adhérence. Côté app : `LevelBar` devient `StreakBar` (streak seul), plus d'XP dans l'overlay de célébration / Stats / Settings / History / Program. Colonnes `streak_*` conservées.
+
+```sql
+ALTER TABLE program_days DROP COLUMN IF EXISTS xp_reward;
+ALTER TABLE user_state   DROP COLUMN IF EXISTS xp_total;
+ALTER TABLE user_state   DROP COLUMN IF EXISTS level;
+```

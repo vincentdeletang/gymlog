@@ -2,15 +2,6 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { supabase } from '@/lib/supabase'
 
-const LEVELS = [
-  { name: 'Recrue',   min: 0 },
-  { name: 'Rookie',   min: 500 },
-  { name: 'Guerrier', min: 1200 },
-  { name: 'Champion', min: 2500 },
-  { name: 'Élite',    min: 4500 },
-  { name: 'Légende',  min: 8000 },
-]
-
 export const useUserStore = defineStore('user', () => {
   const session = ref(null)
   const userState = ref(null)
@@ -19,31 +10,9 @@ export const useUserStore = defineStore('user', () => {
   const user = computed(() => session.value?.user ?? null)
   const isAuthenticated = computed(() => !!user.value)
 
-  const xp = computed(() => userState.value?.xp_total ?? 0)
   const streak = computed(() => userState.value?.streak_current ?? 0)
   const streakBest = computed(() => userState.value?.streak_best ?? 0)
   const profileData = computed(() => userState.value?.profile_data ?? { profil: '', objectifs: '' })
-
-  const currentLevel = computed(() => {
-    const x = xp.value
-    let lvl = LEVELS[0]
-    for (const l of LEVELS) {
-      if (x >= l.min) lvl = l
-    }
-    return lvl
-  })
-
-  const nextLevel = computed(() => {
-    const idx = LEVELS.findIndex(l => l.name === currentLevel.value.name)
-    return LEVELS[idx + 1] ?? null
-  })
-
-  const levelProgress = computed(() => {
-    if (!nextLevel.value) return 100
-    const curr = currentLevel.value.min
-    const next = nextLevel.value.min
-    return Math.round(((xp.value - curr) / (next - curr)) * 100)
-  })
 
   async function init() {
     const { data: { session: s } } = await supabase.auth.getSession()
@@ -90,15 +59,6 @@ export const useUserStore = defineStore('user', () => {
     if (data) userState.value = data
   }
 
-  async function addXP(amount) {
-    if (!userState.value) return
-    const newXP = (userState.value.xp_total ?? 0) + amount
-    const newLevel = computeLevel(newXP)
-    const updates = { xp_total: newXP, level: newLevel }
-    await supabase.from('user_state').update(updates).eq('user_id', user.value.id)
-    userState.value = { ...userState.value, ...updates }
-  }
-
   async function updateStreak(sessionDate) {
     if (!userState.value) return
     const last = userState.value.last_session_date
@@ -119,14 +79,6 @@ export const useUserStore = defineStore('user', () => {
     await supabase.from('user_state').update(updates).eq('user_id', user.value.id)
     userState.value = { ...userState.value, ...updates }
     return streak
-  }
-
-  function computeLevel(xpTotal) {
-    let lvl = 1
-    for (let i = LEVELS.length - 1; i >= 0; i--) {
-      if (xpTotal >= LEVELS[i].min) { lvl = i + 1; break }
-    }
-    return lvl
   }
 
   function daysBetween(a, b) {
@@ -150,10 +102,8 @@ export const useUserStore = defineStore('user', () => {
   return {
     session, userState, loading,
     user, isAuthenticated,
-    xp, streak, streakBest, profileData,
-    currentLevel, nextLevel, levelProgress,
-    LEVELS,
+    streak, streakBest, profileData,
     init, sendMagicLink, signOut,
-    fetchUserState, addXP, updateStreak, saveProfileData,
+    fetchUserState, updateStreak, saveProfileData,
   }
 })

@@ -176,9 +176,6 @@ const SECTION_LABELS = {
           <div class="session-status">
             <span v-if="session.completed" class="badge complete">✓</span>
             <span v-else class="badge abandoned">–</span>
-            <span v-if="session.program_days?.xp_reward" class="xp-label">
-              +{{ session.program_days.xp_reward }} XP
-            </span>
           </div>
         </div>
       </div>
@@ -407,13 +404,6 @@ const SECTION_LABELS = {
 
 .badge.complete  { background: rgba(16,185,129,0.15); color: #10b981; }
 .badge.abandoned { background: rgba(107,114,128,0.15); color: #9ca3af; }
-
-.xp-label {
-  font-family: 'Barlow Condensed', sans-serif;
-  font-size: 12px;
-  color: #f59e0b;
-  font-weight: 700;
-}
 
 .empty-state {
   text-align: center;

@@ -54,7 +54,6 @@ const weeklyStats = computed(() => ({
   trainingDays:  programStore.programDays.filter(d => d.type !== 'rest').length,
   totalSets:     programStore.exercises.reduce((s, e) => s + e.sets_target, 0),
   totalCardioMin: programStore.cardioBlocks.reduce((s, b) => s + b.duration_minutes, 0),
-  totalXP:       programStore.programDays.reduce((s, d) => s + (d.xp_reward ?? 0), 0),
 }))
 
 const maxDayVolume = computed(() =>
@@ -104,11 +103,6 @@ const TYPE_ICON  = { strength: '💪', cardio: '🏃', rest: '😴' }
           <span class="stat-val">{{ weeklyStats.totalCardioMin }}</span>
           <span class="stat-lbl">min cardio</span>
         </div>
-        <div class="stat-div" />
-        <div class="stat">
-          <span class="stat-val">{{ weeklyStats.totalXP }}</span>
-          <span class="stat-lbl">XP / sem</span>
-        </div>
       </div>
 
       <!-- Week strip -->
@@ -154,7 +148,6 @@ const TYPE_ICON  = { strength: '💪', cardio: '🏃', rest: '😴' }
               <span class="type-badge" :style="{ color: TYPE_COLOR[selectedDay.type], borderColor: TYPE_COLOR[selectedDay.type] + '40' }">
                 {{ TYPE_ICON[selectedDay.type] }} {{ selectedDay.type === 'strength' ? 'Muscu' : selectedDay.type === 'cardio' ? 'Cardio' : 'Repos' }}
               </span>
-              <span v-if="selectedDay.xp_reward" class="xp-tag">+{{ selectedDay.xp_reward }} XP</span>
             </div>
           </div>
 
@@ -421,12 +414,6 @@ const TYPE_ICON  = { strength: '💪', cardio: '🏃', rest: '😴' }
   letter-spacing: 0.5px;
 }
 
-.xp-tag {
-  font-family: 'Barlow Condensed', sans-serif;
-  font-size: 12px;
-  font-weight: 700;
-  color: #f59e0b;
-}
 
 .rest-msg {
   display: flex;

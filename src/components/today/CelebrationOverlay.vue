@@ -4,7 +4,6 @@ import { useConfetti } from '@/composables/useConfetti'
 import { useAudio } from '@/composables/useAudio'
 
 const props = defineProps({
-  xpEarned: Number,
   streakCount: Number,
   stats: Object, // { setsDone, tonnage, avgRir, durationSec, prCount }
 })
@@ -41,7 +40,6 @@ onMounted(() => {
     <div class="celebration-card">
       <div class="trophy">🏆</div>
       <h2 class="message">{{ message }}</h2>
-      <div class="xp-earned">+{{ xpEarned }} XP</div>
 
       <div v-if="stats" class="stats-grid">
         <div v-if="stats.tonnage > 0" class="stat-cell">
@@ -121,15 +119,6 @@ onMounted(() => {
   letter-spacing: 1px;
   margin: 0;
   text-transform: uppercase;
-}
-
-.xp-earned {
-  font-family: 'Barlow Condensed', sans-serif;
-  font-size: 52px;
-  font-weight: 800;
-  color: #f59e0b;
-  letter-spacing: 2px;
-  line-height: 1;
 }
 
 .stats-grid {

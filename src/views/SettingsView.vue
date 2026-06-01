@@ -163,12 +163,6 @@ async function openExportModal() {
       </div>
       <div class="setting-row">
         <div class="setting-info">
-          <div class="setting-title">Niveau</div>
-          <div class="setting-sub">{{ userStore.currentLevel.name }} · {{ userStore.xp }} XP</div>
-        </div>
-      </div>
-      <div class="setting-row">
-        <div class="setting-info">
           <div class="setting-title">Meilleur streak</div>
           <div class="setting-sub">🔥 {{ userStore.streakBest }} jours</div>
         </div>

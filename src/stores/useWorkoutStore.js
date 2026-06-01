@@ -331,9 +331,9 @@ export const useWorkoutStore = defineStore('workout', () => {
       .catch(() => {})
   }
 
-  async function completeSession(xpReward) {
+  async function completeSession() {
     if (!currentSession.value) return false
-    if (currentSession.value.completed) return false // already done — no double XP/streak
+    if (currentSession.value.completed) return false // already done — no double streak
 
     const userStore = useUserStore()
     const sessionDate = currentSession.value.session_date
@@ -342,7 +342,6 @@ export const useWorkoutStore = defineStore('workout', () => {
 
     // Optimistic local update — show celebration immediately
     currentSession.value = { ...currentSession.value, completed: true, completed_at: completedAt }
-    await userStore.addXP(xpReward)
     if (!isCatchUp) {
       await userStore.updateStreak(sessionDate)
     }
@@ -449,7 +448,7 @@ export const useWorkoutStore = defineStore('workout', () => {
     const userStore = useUserStore()
     const { data } = await supabase
       .from('workout_sessions')
-      .select('*, program_days(name, type, day_of_week, xp_reward)')
+      .select('*, program_days(name, type, day_of_week)')
       .eq('user_id', userStore.user.id)
       .order('session_date', { ascending: false })
       .limit(limit)
