@@ -1,3 +1,4 @@
+import { ref } from 'vue'
 import { supabase } from './supabase'
 
 const DB_NAME = 'gymlog-offline'
@@ -6,6 +7,14 @@ const STORE_NAME = 'pending_sets'
 const NET_TIMEOUT_MS = 8000
 
 let db = null
+
+// Reactive sync status, consumed by SyncBadge.vue
+export const pendingCount = ref(0)
+export const syncState = ref('idle') // 'idle' | 'syncing' | 'error'
+
+async function refreshPendingCount() {
+  try { pendingCount.value = (await getPendingLogs()).length } catch { /* ignore */ }
+}
 
 async function getDb() {
   if (db) return db
@@ -27,7 +36,7 @@ export async function queueSetLog(setLog) {
   return new Promise((resolve, reject) => {
     const tx = database.transaction(STORE_NAME, 'readwrite')
     tx.objectStore(STORE_NAME).put({ ...setLog, _pending: true })
-    tx.oncomplete = resolve
+    tx.oncomplete = () => { refreshPendingCount(); resolve() }
     tx.onerror = () => reject(tx.error)
   })
 }
@@ -47,7 +56,7 @@ export async function removePendingLog(id) {
   return new Promise((resolve, reject) => {
     const tx = database.transaction(STORE_NAME, 'readwrite')
     tx.objectStore(STORE_NAME).delete(id)
-    tx.oncomplete = resolve
+    tx.oncomplete = () => { refreshPendingCount(); resolve() }
     tx.onerror = () => reject(tx.error)
   })
 }
@@ -78,17 +87,22 @@ let syncing = false
 export async function syncPendingLogs() {
   if (syncing) return
   syncing = true
+  syncState.value = 'syncing'
+  let failed = false
   try {
     const pending = await getPendingLogs()
     for (const log of pending) {
-      try { await pushSetLog(log) } catch { /* leave in queue */ }
+      try { await pushSetLog(log) } catch { failed = true /* leave in queue */ }
     }
   } finally {
     syncing = false
+    await refreshPendingCount()
+    syncState.value = failed ? 'error' : 'idle'
   }
 }
 
 if (typeof window !== 'undefined') {
+  refreshPendingCount()
   window.addEventListener('online', () => syncPendingLogs())
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible') syncPendingLogs()

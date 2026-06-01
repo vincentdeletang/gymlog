@@ -2,6 +2,7 @@
 import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import BottomNav from '@/components/shared/BottomNav.vue'
+import SyncBadge from '@/components/shared/SyncBadge.vue'
 import { useUserStore } from '@/stores/useUserStore'
 import { supabase } from '@/lib/supabase'
 
@@ -67,6 +68,7 @@ onUnmounted(() => {
 <template>
   <div class="min-h-screen flex flex-col" style="background:#0a0e17">
     <router-view />
+    <SyncBadge v-if="userStore.isAuthenticated" />
     <BottomNav v-if="userStore.isAuthenticated" :key="navKey" />
   </div>
 </template>
