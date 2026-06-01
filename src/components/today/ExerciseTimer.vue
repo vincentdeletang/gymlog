@@ -13,8 +13,7 @@ const props = defineProps({
 const emit = defineEmits(['stop', 'cancel'])
 
 const {
-  playPrepTick, playGo, playTick10, playTickHalf, playTickFinal,
-  playComplete, vibrate,
+  playPrepTick, playGo, playTick10, playComplete, vibrate,
 } = useAudio()
 
 const phase = ref('prep') // 'prep' | 'run' | 'between' | 'post'
@@ -92,53 +91,29 @@ function fireOnce(key, fn) {
 }
 
 function checkMilestones() {
+  if (phase.value !== 'run') return
+
   const sec = elapsedSec.value
   const target = props.targetSeconds
-  const halfwayAt = Math.floor(target / 2)
-  const hasTicks = target >= 45
-  const tickInterval = target >= 90 ? 15 : 10
 
-  if (phase.value === 'run') {
-    if (halfwayAt > 0 && halfwayAt <= target - 5 && sec >= halfwayAt) {
-      fireOnce('halfway', () => { playTickHalf(); vibrate([90]) })
+  for (let i = 3; i >= 1; i--) {
+    const t = target - i
+    if (t > 0 && sec >= t) {
+      fireOnce(`count_${i}`, () => { playTick10(); vibrate([30]) })
     }
-    if (hasTicks) {
-      for (let t = tickInterval; t < target - 5; t += tickInterval) {
-        if (t === halfwayAt) continue
-        if (sec >= t) fireOnce(`tick_${t}`, () => { playTick10(); vibrate([30]) })
-      }
+  }
+
+  if (sec >= target) {
+    if (props.perSide && side.value === 1) {
+      fireOnce('target_side1', () => { playComplete(); vibrate([120, 60, 120]) })
+      startBetween()
+      return
     }
-    for (let i = 5; i >= 1; i--) {
-      const t = target - i
-      if (t > 0 && sec >= t) {
-        fireOnce(`count_${i}`, () => { playTickFinal(); vibrate([40]) })
-      }
-    }
-    if (sec >= target) {
-      if (props.perSide && side.value === 1) {
-        fireOnce('target_side1', () => {
-          playComplete()
-          vibrate([120, 60, 120])
-        })
-        startBetween()
-        return
-      }
-      fireOnce('target', () => {
-        playComplete()
-        vibrate([120, 60, 120, 60, 200])
-      })
-      if (props.isRange) {
-        phase.value = 'post'
-      } else {
-        doStop()
-        return
-      }
-    }
-  } else if (phase.value === 'post') {
-    for (let t = 10; t <= 600; t += 10) {
-      if (sec >= target + t) {
-        fireOnce(`post_${t}`, () => { playTick10(); vibrate([30]) })
-      }
+    fireOnce('target', () => { playComplete(); vibrate([200, 80, 200]) })
+    if (props.isRange) {
+      phase.value = 'post'
+    } else {
+      doStop()
     }
   }
 }

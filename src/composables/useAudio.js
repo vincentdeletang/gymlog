@@ -66,12 +66,10 @@ export function useAudio() {
   }
 
   function playTick10() { tone({ freq: 700, duration: 0.08, startGain: 0.22 }) }
-  function playTickHalf() { tone({ freq: 480, duration: 0.28, startGain: 0.3 }) }
-  function playTickFinal() { tone({ freq: 1100, duration: 0.08, startGain: 0.28 }) }
 
   return {
     playSuccess, playComplete,
-    playPrepTick, playGo, playTick10, playTickHalf, playTickFinal,
+    playPrepTick, playGo, playTick10,
     vibrate,
   }
 }
