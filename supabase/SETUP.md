@@ -1668,7 +1668,7 @@ BEGIN
     IF NOT EXISTS (SELECT 1 FROM exercises WHERE program_day_id = d_id AND name = 'Isométrie biceps (temporaire)') THEN
       INSERT INTO exercises (program_day_id, name, order_index, sets_target, reps_target, is_bodyweight, notes, section)
       VALUES (d_id, 'Isométrie biceps (temporaire)', 5, 3, '30s', true,
-        'PROTOCOLE TENDON (chef long du biceps). Tenir une charge MODÉRÉE-LOURDE, coude à ~90°, avant-bras supiné, sans bouger, ~30s. La charge compte (pas un truc léger). Douleur ≤ 3/10. Renforce + soulage le tendon. TEMPORAIRE → à retirer une fois l''épaule calme. En warm-up, pas tous les jours (le tendon récupère en plusieurs heures).',
+        'PROTOCOLE TENDON (chef long du biceps). Position = MILIEU D''UN CURL tenu STATIQUE : coude collé au corps à ~90° (avant-bras // sol), paume vers le haut (supinée). Tu ne montes ni ne descends, tu RÉSISTES immobile ~30s. CHARGE = ton poids de curl pour un set dur de 8-12 reps : ça doit devenir vraiment dur sur les 10 dernières s (RPE 7-8) mais tenable sans douleur > 3/10. Trop facile à 30s = trop léger ; progresse au fil des semaines tant que c''est indolore. Supination tire sur l''épaule ? → prise neutre (hammer). TEMPORAIRE, à retirer une fois l''épaule calme. Pas tous les jours.',
         'rehab');
     END IF;
   END LOOP;
