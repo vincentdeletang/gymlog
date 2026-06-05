@@ -1,14 +1,16 @@
 <script setup>
-import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useAudio } from '@/composables/useAudio'
 
 const props = defineProps({
-  durationSec: { type: Number, required: true },
+  durationSec: { type: Number, default: 0 },
+  endAt: { type: Number, default: 0 },     // absolute ms timestamp; restores a running timer across reloads
+  totalSec: { type: Number, default: 0 },  // full duration (for the progress bar); falls back to durationSec
   exerciseName: String,
   setNumber: Number,
   accent: { type: String, default: '#3b82f6' },
 })
-const emit = defineEmits(['done', 'dismiss'])
+const emit = defineEmits(['done', 'dismiss', 'change'])
 
 const { playTick10, playComplete, vibrate } = useAudio()
 
@@ -52,14 +54,23 @@ function tick() {
   raf = requestAnimationFrame(tick)
 }
 
-function start(seconds) {
-  total.value = seconds
-  remaining.value = seconds
-  endAt = Date.now() + seconds * 1000
+function init(totalDuration, endAtMs) {
+  total.value = totalDuration
+  endAt = endAtMs
   finished.value = false
   fired.clear()
+  const remNow = Math.ceil(Math.max(0, endAt - Date.now()) / 1000)
+  remaining.value = remNow
+  // Prime past cues so a restored timer doesn't replay every beep at once
+  if (totalDuration >= 60 && totalDuration - remNow >= Math.floor(totalDuration / 2)) fired.add('half')
+  for (let i = 3; i >= 1; i--) if (remNow < i) fired.add(`c${i}`)
+  if (endAt <= Date.now()) finished.value = true
   if (raf) cancelAnimationFrame(raf)
   raf = requestAnimationFrame(tick)
+}
+
+function start(seconds) {
+  init(seconds, Date.now() + seconds * 1000)
 }
 
 function add(seconds) {
@@ -69,10 +80,12 @@ function add(seconds) {
     fired.clear()
     raf = requestAnimationFrame(tick)
   }
+  emit('change', endAt)
 }
 
 function sub(seconds) {
   endAt = Math.max(Date.now(), endAt - seconds * 1000)
+  emit('change', endAt)
 }
 
 function dismiss() {
@@ -89,15 +102,14 @@ function onVisibility() {
 
 onMounted(() => {
   document.addEventListener('visibilitychange', onVisibility)
-  start(props.durationSec)
+  if (props.endAt) init(props.totalSec || props.durationSec, props.endAt)
+  else start(props.durationSec)
 })
 
 onUnmounted(() => {
   document.removeEventListener('visibilitychange', onVisibility)
   if (raf) cancelAnimationFrame(raf)
 })
-
-watch(() => props.durationSec, (n) => start(n))
 
 const display = computed(() => {
   const s = Math.max(0, remaining.value)

@@ -51,8 +51,20 @@ const timerInputTarget = ref(null)
 // Rest timer between sets — non-blocking bottom bar
 const REST_BY_SECTION = { main: 120, rehab: 30, cooldown: 45, mobility: 0, cardio: 0 }
 const SECTION_ACCENT = { main: '#3b82f6', rehab: '#f59e0b', cooldown: '#8b5cf6', mobility: '#06b6d4', cardio: '#10b981' }
-const restTimer = ref(null) // { duration, exerciseName, setNumber, accent, key }
+const restTimer = ref(null) // { duration, total, endAt, exerciseName, setNumber, accent, key }
 let restKey = 0
+
+// Persist the rest timer so it survives the background reload (cf. App.vue).
+// Only the end timestamp matters: the bar recomputes remaining time from it.
+const REST_STORAGE_KEY = 'gymlog.restTimer'
+const REST_DONE_GRACE_MS = 120000 // still show "done" if we return shortly after it ended
+function persistRest(t) {
+  try {
+    if (t) localStorage.setItem(REST_STORAGE_KEY, JSON.stringify(t))
+    else localStorage.removeItem(REST_STORAGE_KEY)
+  } catch {}
+}
+
 function startRestTimer(exercise, setNumber) {
   if (inCatchUpMode.value) return
   const seconds = REST_BY_SECTION[exercise.section] ?? 0
@@ -60,13 +72,30 @@ function startRestTimer(exercise, setNumber) {
   restKey++
   restTimer.value = {
     duration: seconds,
+    total: seconds,
+    endAt: Date.now() + seconds * 1000,
     exerciseName: exercise.name,
     setNumber,
     accent: SECTION_ACCENT[exercise.section] ?? '#3b82f6',
     key: restKey,
   }
+  persistRest(restTimer.value)
 }
-function dismissRestTimer() { restTimer.value = null }
+function dismissRestTimer() { restTimer.value = null; persistRest(null) }
+function onRestChange(newEndAt) {
+  if (!restTimer.value) return
+  restTimer.value.endAt = newEndAt
+  persistRest(restTimer.value)
+}
+function restoreRestTimer() {
+  if (inCatchUpMode.value) return
+  let saved
+  try { saved = JSON.parse(localStorage.getItem(REST_STORAGE_KEY) || 'null') } catch { saved = null }
+  if (!saved?.endAt) return
+  if (Date.now() > saved.endAt + REST_DONE_GRACE_MS) { persistRest(null); return }
+  restKey = Math.max(restKey, saved.key || 0)
+  restTimer.value = saved
+}
 
 // PR flash state
 const prFlash = ref(null) // { exerciseName, prevBest, newE1RM, deltaKg }
@@ -117,7 +146,10 @@ async function loadActiveSession() {
   loading.value = false
 }
 
-onMounted(loadActiveSession)
+onMounted(async () => {
+  await loadActiveSession()
+  restoreRestTimer()
+})
 
 watch(() => route.params.date, (next, prev) => {
   if (next === prev) return
@@ -554,9 +586,12 @@ watch(mobilityDone, done => { if (done) open.value.mobility = false })
       v-if="restTimer"
       :key="restTimer.key"
       :duration-sec="restTimer.duration"
+      :total-sec="restTimer.total"
+      :end-at="restTimer.endAt"
       :exercise-name="restTimer.exerciseName"
       :set-number="restTimer.setNumber"
       :accent="restTimer.accent"
+      @change="onRestChange"
       @dismiss="dismissRestTimer"
     />
 
