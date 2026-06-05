@@ -1,5 +1,5 @@
 <script setup>
-import { computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import SetButton from './SetButton.vue'
 import { useWorkoutStore } from '@/stores/useWorkoutStore'
 import { suggestedWeight } from '@/lib/progression'
@@ -21,6 +21,15 @@ const allLogged = computed(() =>
   sets.value.every(s => workoutStore.isSetLogged(props.exercise.id, s))
 )
 
+// QoL : replier un exo dès que toutes ses sets sont faites (moins de scroll en séance).
+// Se déplie tout seul si une set est dé-loggée ; l'en-tête permet de basculer à la main.
+const collapsed = ref(false)
+watch(allLogged, (done) => { collapsed.value = done }, { immediate: true })
+function toggleCollapse() {
+  if (!allLogged.value) return
+  collapsed.value = !collapsed.value
+}
+
 const timed = computed(() => isTimedTarget(props.exercise.reps_target))
 
 const suggestion = computed(() => {
@@ -39,8 +48,8 @@ const SECTION_BADGE = {
 </script>
 
 <template>
-  <div class="exercise-row" :class="{ done: allLogged }">
-    <div class="ex-header">
+  <div class="exercise-row" :class="{ done: allLogged, collapsed }">
+    <div class="ex-header" :class="{ clickable: allLogged }" @click="toggleCollapse">
       <div class="ex-name-wrap">
         <span
           class="section-dot"
@@ -49,27 +58,33 @@ const SECTION_BADGE = {
         <span class="ex-name">{{ exercise.name }}</span>
       </div>
       <div class="ex-meta">
+        <span v-if="collapsed" class="done-check">✓</span>
         <span class="ex-sets">{{ exercise.sets_target }}×{{ exercise.reps_target }}</span>
-        <span v-if="exercise.is_bodyweight" class="bw-badge">BW</span>
-        <span v-if="suggestion" class="weight-suggestion" :class="{ increased: suggestion.increased }">
+        <span v-if="!collapsed && exercise.is_bodyweight" class="bw-badge">BW</span>
+        <span v-if="!collapsed && suggestion" class="weight-suggestion" :class="{ increased: suggestion.increased }">
           {{ suggestion.increased ? '↑' : '=' }} {{ suggestion.weight }}kg
         </span>
+        <span v-if="allLogged" class="collapse-chevron" :class="{ open: !collapsed }">▾</span>
       </div>
     </div>
 
-    <div v-if="exercise.notes" class="ex-notes">{{ exercise.notes }}</div>
+    <transition name="collapse">
+      <div v-if="!collapsed" class="ex-body">
+        <div v-if="exercise.notes" class="ex-notes">{{ exercise.notes }}</div>
 
-    <div class="sets-row">
-      <SetButton
-        v-for="s in sets"
-        :key="s"
-        :set-number="s"
-        :log="workoutStore.getSetLog(exercise.id, s)"
-        :is-bodyweight="exercise.is_bodyweight"
-        :is-timed="timed"
-        @click="emit('openSet', { exercise, setNumber: s })"
-      />
-    </div>
+        <div class="sets-row">
+          <SetButton
+            v-for="s in sets"
+            :key="s"
+            :set-number="s"
+            :log="workoutStore.getSetLog(exercise.id, s)"
+            :is-bodyweight="exercise.is_bodyweight"
+            :is-timed="timed"
+            @click="emit('openSet', { exercise, setNumber: s })"
+          />
+        </div>
+      </div>
+    </transition>
   </div>
 </template>
 
@@ -90,11 +105,54 @@ const SECTION_BADGE = {
   background: rgba(16, 185, 129, 0.04);
 }
 
+.exercise-row.collapsed {
+  padding: 10px 14px;
+  gap: 0;
+}
+
 .ex-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
+}
+
+.ex-header.clickable {
+  cursor: pointer;
+  user-select: none;
+}
+
+.ex-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.done-check {
+  color: #10b981;
+  font-weight: 800;
+  font-size: 14px;
+}
+
+.collapse-chevron {
+  color: #6b7280;
+  font-size: 11px;
+  transition: transform 0.2s;
+  transform: rotate(-90deg);
+}
+
+.collapse-chevron.open {
+  transform: rotate(0deg);
+}
+
+.collapse-enter-active,
+.collapse-leave-active {
+  transition: opacity 0.18s ease;
+}
+
+.collapse-enter-from,
+.collapse-leave-to {
+  opacity: 0;
 }
 
 .ex-name-wrap {
