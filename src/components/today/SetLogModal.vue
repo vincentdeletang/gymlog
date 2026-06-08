@@ -2,6 +2,7 @@
 import { ref, computed, watch, onUnmounted } from 'vue'
 import { parseRepsTarget } from '@/lib/progression'
 import { decomposeWeight, formatDecomposition } from '@/lib/plateCalc'
+import ExerciseNotes from '@/components/shared/ExerciseNotes.vue'
 
 const props = defineProps({
   exercise: Object,
@@ -211,9 +212,9 @@ onUnmounted(() => {
             </div>
           </div>
 
-          <!-- Notes -->
+          <!-- Notes (repliées par défaut, dépliables à la demande) -->
           <div v-if="exercise?.notes" class="notes">
-            💡 {{ exercise.notes }}
+            <ExerciseNotes :notes="exercise.notes" />
           </div>
 
           <button class="save-btn" @click="save">
@@ -421,12 +422,10 @@ onUnmounted(() => {
 }
 
 .notes {
-  background: rgba(59, 130, 246, 0.08);
-  border: 1px solid rgba(59, 130, 246, 0.2);
+  background: #1f2937;
+  border: 1px solid #374151;
   border-radius: 8px;
   padding: 8px 12px;
-  font-size: 13px;
-  color: #93c5fd;
 }
 
 .save-btn {

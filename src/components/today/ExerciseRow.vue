@@ -1,6 +1,7 @@
 <script setup>
 import { ref, computed, watch } from 'vue'
 import SetButton from './SetButton.vue'
+import ExerciseNotes from '@/components/shared/ExerciseNotes.vue'
 import { useWorkoutStore } from '@/stores/useWorkoutStore'
 import { suggestedWeight } from '@/lib/progression'
 import { isTimed as isTimedTarget } from '@/lib/parseTarget'
@@ -70,7 +71,7 @@ const SECTION_BADGE = {
 
     <transition name="collapse">
       <div v-if="!collapsed" class="ex-body">
-        <div v-if="exercise.notes" class="ex-notes">{{ exercise.notes }}</div>
+        <ExerciseNotes :notes="exercise.notes" />
 
         <div class="sets-row">
           <SetButton
@@ -216,12 +217,6 @@ const SECTION_BADGE = {
 .weight-suggestion.increased {
   color: #10b981;
   background: rgba(16, 185, 129, 0.1);
-}
-
-.ex-notes {
-  font-size: 12px;
-  color: #6b7280;
-  font-style: italic;
 }
 
 .sets-row {

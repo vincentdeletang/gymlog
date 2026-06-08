@@ -1,6 +1,7 @@
 <script setup>
 import { ref, computed, watch, onMounted } from 'vue'
 import { useProgramStore } from '@/stores/useProgramStore'
+import ExerciseNotes from '@/components/shared/ExerciseNotes.vue'
 
 const programStore = useProgramStore()
 
@@ -169,7 +170,7 @@ const TYPE_ICON  = { strength: '💪', cardio: '🏃', rest: '😴' }
                   <span class="ex-name">{{ ex.name }}</span>
                   <span class="ex-sets">{{ ex.sets_target }}×{{ ex.reps_target }}</span>
                 </div>
-                <div v-if="ex.notes" class="ex-notes">{{ ex.notes }}</div>
+                <ExerciseNotes :notes="ex.notes" />
               </div>
             </div>
           </div>
