@@ -1724,3 +1724,15 @@ CHARGE : plus la barre est HAUTE = plus facile (torse redressé). Commence haut.
   END IF;
 END $$;
 ```
+
+---
+
+## 43. Migration 041 — Drop soreness_logs (check-in épaule retiré)
+
+> Le check-in quotidien « Comment va ton épaule gauche ? » (0-3) était en **écriture seule** : aucune logique ne lisait le niveau pour modifier la séance (juste stocké + réaffiché en courbe). Le user tape « Nickel » par réflexe à chaque fois → données sans valeur, tendance = bruit. Il auto-régule son épaule au feeling (même logique que le rest timer) et sa vraie gestion vit dans le programme (drop développé incliné migr. 039, iso biceps, rehab non-négo). Retiré côté front (`SorenessCheckin`, `SorenessHistory`, store `useSorenessStore`) + drop de la table (rien n'y écrit plus, historique 100% « Nickel » sans intérêt).
+>
+> **⚠️ Note** : `DROP TABLE` destructif — supprime l'historique soreness. Assumé (données sans valeur).
+
+```sql
+DROP TABLE IF EXISTS soreness_logs;
+```

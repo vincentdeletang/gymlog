@@ -7,7 +7,6 @@ import BodyweightCard from '@/components/stats/BodyweightCard.vue'
 import WeeklyVolumeByMuscle from '@/components/stats/WeeklyVolumeByMuscle.vue'
 import DeloadAlert from '@/components/stats/DeloadAlert.vue'
 import PRList from '@/components/stats/PRList.vue'
-import SorenessHistory from '@/components/stats/SorenessHistory.vue'
 import { useUserStore } from '@/stores/useUserStore'
 import { useWorkoutStore } from '@/stores/useWorkoutStore'
 import { useProgramStore } from '@/stores/useProgramStore'
@@ -218,11 +217,6 @@ function getWeekNumber(d) {
     <!-- Personal records -->
     <div class="section-block">
       <PRList />
-    </div>
-
-    <!-- Soreness history -->
-    <div class="section-block">
-      <SorenessHistory />
     </div>
 
     <!-- Weight progression per exercise -->
