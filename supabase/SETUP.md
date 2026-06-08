@@ -1674,3 +1674,53 @@ BEGIN
   END LOOP;
 END $$;
 ```
+
+---
+
+## 42. Migration 040 — Lundi : Chest-supported row → Inverted row
+
+> Le user ne peut faire correctement **aucune** des variantes de tirage testées (1m97/136kg) : rowing barre = amplitude bloquée par le ventre ; chest-supported row = position face au banc qui écrase l'entrejambe ; rowing haltère unilatéral = pas senti. Or c'est le **seul tirage horizontal de la semaine** (lundi = unique jour pull) → on ne supprime pas sans remplacer : le dos n'est pas une cible hypertrophie mais le tirage couvre 3 priorités réelles (posture/anti-blessure, santé épaule G via rétraction scapulaire, biceps indirect). Remplacement par **Inverted row** (poids de corps, barre droite sur les barres de sécurité) : corps suspendu sous la barre, seules les chaussures touchent le sol → plus de contact ventre/banc/entrejambe et pas d'appui au sol du garage (cf. floor press refusé). Gainage rigide = anti-extension (bon pour les lombaires). Charge réglée par l'angle (barre haute = facile, adapté à 136kg) et s'allège avec la perte de gras. **Prise supination** = biceps indirect maximisé, épaule en flexion (n'agace pas le chef long du biceps). Garde order_index 5, 4×8-12, muscle_group 'back' ; bodyweight + bilatéral (≠ unilatéral avant).
+>
+> **⚠️ Note** : supprime un exo avec `set_logs` historiques (chest-supported row) → suppression des logs avant l'exo (FK constraint), détruit l'historique. Même pattern que 010, 011, 030, 031, 032, 039.
+
+```sql
+DO $$
+DECLARE
+  d_lundi UUID;
+BEGIN
+  SELECT pd.id INTO d_lundi
+    FROM program_days pd
+    JOIN programs p ON p.id = pd.program_id
+   WHERE p.is_active = true AND pd.day_of_week = 1;
+
+  -- Drop set_logs du chest-supported row (FK) puis l'exo
+  DELETE FROM set_logs
+   WHERE exercise_id IN (
+     SELECT id FROM exercises
+      WHERE program_day_id = d_lundi
+        AND name = 'Chest-supported row haltère'
+   );
+
+  DELETE FROM exercises
+   WHERE program_day_id = d_lundi
+     AND name = 'Chest-supported row haltère';
+
+  -- Insert de l'inverted row (idempotent)
+  IF NOT EXISTS (SELECT 1 FROM exercises WHERE program_day_id = d_lundi AND name = 'Inverted row (barres de sécurité)') THEN
+    INSERT INTO exercises (program_day_id, name, order_index, sets_target, reps_target, is_bodyweight, notes, section, muscle_group, is_per_side)
+    VALUES (
+      d_lundi,
+      'Inverted row (barres de sécurité)',
+      5, 4, '8-12', true,
+      'Cible : milieu du dos + grand dorsal. Biceps indirect.
+
+SETUP : barre droite posée sur les barres de sécurité, hauteur hanche / bas de poitrine. Te glisser dessous, prise SUPINATION (paumes vers toi, largeur épaules), corps gainé droit de la tête aux talons, talons au sol. Tu es suspendu : seules tes chaussures touchent le sol.
+
+EXÉCUTION : tirer le STERNUM vers la barre en serrant les omoplates (omoplate d''abord). Pause brève en haut, descente contrôlée jusqu''aux bras tendus. Corps rigide tout du long = gainage anti-extension (comme un plank, bon pour les lombaires).
+
+CHARGE : plus la barre est HAUTE = plus facile (torse redressé). Commence haut. Régression : genoux pliés, pieds à plat. Progression : baisse la barre d''un cran quand 8-12 deviennent faciles — et ça s''allège tout seul à mesure que tu perds du gras.',
+      'main', 'back', false
+    );
+  END IF;
+END $$;
+```
