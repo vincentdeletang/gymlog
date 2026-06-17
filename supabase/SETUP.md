@@ -1736,3 +1736,34 @@ END $$;
 ```sql
 DROP TABLE IF EXISTS soreness_logs;
 ```
+
+---
+
+## 44. Migration 042 — Lundi : Drop inverted row (tirage supprimé)
+
+> Fin d'itération sur le slot tirage. Le user (1m97/136kg) a échoué à exécuter correctement **toutes** les variantes : rowing barre = ventre bloque l'amplitude ; rowing haltère unilatéral **soutenu** = pas senti ; chest-supported row incliné = écrase l'entrejambe ; inverted row = le rack improvisé léger **se soulève à l'arrière** sous 136kg → pas safe. 5 variantes, aucune ne tient → on **supprime sans remplacer**. Le dos n'est pas une cible hypertrophie ("dose minimale efficace"). Des 3 jobs du tirage : biceps indirect → déjà couvert par les curls directs ; rétraction scapulaire/santé épaule → déjà porté par les face pulls + rotations externes (rehab, conservés) ; contrepoids postural au pressing → seule vraie perte, mais le pressing est lui-même en dose minimale → déséquilibre modéré et surveillable. Lundi raccourcit (meilleure adhérence) ; pas de remplacement bras (déjà au plafond utile en déficit).
+>
+> **⚠️ Note** : supprime un exo avec `set_logs` historiques (inverted row) → suppression des logs avant l'exo (FK constraint), détruit l'historique. Même pattern que 010, 011, 030, 031, 032, 039, 040.
+
+```sql
+DO $$
+DECLARE
+  d_lundi UUID;
+BEGIN
+  SELECT pd.id INTO d_lundi
+    FROM program_days pd
+    JOIN programs p ON p.id = pd.program_id
+   WHERE p.is_active = true AND pd.day_of_week = 1;
+
+  DELETE FROM set_logs
+   WHERE exercise_id IN (
+     SELECT id FROM exercises
+      WHERE program_day_id = d_lundi
+        AND name = 'Inverted row (barres de sécurité)'
+   );
+
+  DELETE FROM exercises
+   WHERE program_day_id = d_lundi
+     AND name = 'Inverted row (barres de sécurité)';
+END $$;
+```
