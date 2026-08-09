@@ -115,11 +115,23 @@ export const useProgramStore = defineStore('program', () => {
     return !error
   }
 
+  async function updateProgressionMode(exerciseId, mode) {
+    const { error } = await supabase
+      .from('exercises')
+      .update({ progression_mode: mode })
+      .eq('id', exerciseId)
+    if (!error) {
+      const ex = exercises.value.find(e => e.id === exerciseId)
+      if (ex) ex.progression_mode = mode
+    }
+    return !error
+  }
+
   return {
     activeProgram, programDays, exercises, cardioBlocks, bars, loading,
     activeDate, setActiveDate,
     activeDay, activeProgramDay, activeExercises, activeCardioBlocks, exercisesBySection,
     fetchActiveProgram, getProgramDayById, getExercisesForDay, getCardioBlocksForDay,
-    updateExerciseBar,
+    updateExerciseBar, updateProgressionMode,
   }
 })

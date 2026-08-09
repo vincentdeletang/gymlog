@@ -1884,3 +1884,59 @@ Supination qui tire sur l''épaule ? → prise neutre (hammer).'
      AND name = 'Isométrie biceps (temporaire)';
 END $$;
 ```
+
+---
+
+## 46. Migration 044 — Mode de progression par exercice (charge ⇄ reps)
+
+> **Le problème.** La surcharge progressive n'existait que sur **une** variable : la charge. Règle unique — reps au max de la plage + RIR ≥ 2 → +2 kg. Ça marche tant qu'on veut monter en charge indéfiniment.
+>
+> Or le user a une contrainte explicite : *« l'idée c'était de monter en poids jusqu'à ce que je sente que c'est assez lourd et de stabiliser à ce poids, j'ai pas envie de trop pousser car j'ai pas envie de me faire des blessures »*. C'est cohérent avec ses objectifs #2 (santé/longévité) et #3 (éviter les blessures), qui passent **avant** l'hypertrophie.
+>
+> Le souci n'était donc pas qu'il refusait la charge — c'est que refuser la charge supprimait **toute** progression. Plage `10-12`, il est à 12, charge figée → plus aucune surcharge, donc plus aucune raison pour le muscle de grossir. Constaté en base : **curl barre EZ bloqué à 36 kg × 12 × RIR 2 pendant 8 séances** (15/06 → 03/08) alors que l'app lui proposait 38 kg à chaque fois.
+>
+> **La solution.** Un mode par exercice — le user choisit quelle variable monte :
+> - `weight` (défaut, comportement historique) : reps plafonnées par `reps_target`, charge +2 kg
+> - `reps` : charge **figée** à la dernière valeur loggée, objectif **+1 rep par séance**
+>
+> En mode `reps`, `reps_target` ne pilote plus rien : l'objectif du jour = reps de la séance précédente + 1 (si RIR ≥ 2), plafonné à **20** (`REPS_CEILING` côté front). Au plafond, l'app *propose* +2 kg — proposition, jamais automatique. **Bénéfice sécurité** : dans ce schéma il n'augmente la charge que quand il tient déjà 20 reps avec, au lieu de 12 aujourd'hui. Les hausses deviennent plus rares *et* moins risquées.
+>
+> Marche aussi pour les exos au **poids de corps** (pompes mains surélevées de la 043), qui n'avaient aucune suggestion jusqu'ici faute de charge à incrémenter.
+>
+> **Décision de design : les reps ne sont jamais pré-remplies**, même en mode reps. La charge se vérifie sur la barre, les reps se comptent — pré-remplir un objectif de reps le transformerait en donnée tapée par réflexe, et c'est cette donnée qui pilote toute la progression (même piège que le RIR 2 présélectionné, ou que le check-in épaule supprimé en 041). L'objectif s'affiche dans le badge à la place.
+>
+> **Front** : `progression.js` (`nextTarget` remplace `suggestedWeight`), `ExerciseRow` (pastille `🔒 36kg · ↑ 13 reps`, en-tête `4×13` au lieu de `4×10-12`), `SetLogModal` (badge + bouton de bascule sous « Dernière fois »), `useProgramStore.updateProgressionMode`, `programExport` (le mode part dans l'export d'analyse IA). RLS déjà ouverte par la 017.
+>
+> **Bascule d'office** : Curl barre EZ → `reps` (le user a dit que 36 kg est assez lourd). Les autres exos restent en `weight`, il les bascule lui-même depuis l'app.
+>
+> Aucun `set_log` touché.
+
+```sql
+ALTER TABLE exercises
+  ADD COLUMN IF NOT EXISTS progression_mode TEXT NOT NULL DEFAULT 'weight';
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'exercises_progression_mode_check'
+  ) THEN
+    ALTER TABLE exercises
+      ADD CONSTRAINT exercises_progression_mode_check
+      CHECK (progression_mode IN ('weight', 'reps'));
+  END IF;
+END $$;
+
+DO $$
+DECLARE
+  d_lundi UUID;
+BEGIN
+  SELECT pd.id INTO d_lundi
+    FROM program_days pd JOIN programs p ON p.id = pd.program_id
+   WHERE p.is_active = true AND pd.day_of_week = 1;
+
+  UPDATE exercises
+     SET progression_mode = 'reps'
+   WHERE program_day_id = d_lundi
+     AND name = 'Curl barre EZ (supination)';
+END $$;
+```

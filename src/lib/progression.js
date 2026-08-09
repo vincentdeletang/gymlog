@@ -1,3 +1,10 @@
+export const MODE_WEIGHT = 'weight'
+export const MODE_REPS = 'reps'
+
+// Plafond du mode reps : au-delà, la série devient trop longue pour rester un bon
+// stimulus d'hypertrophie. On arrête de proposer +1 rep et on suggère la charge.
+export const REPS_CEILING = 20
+
 export function parseRepsTarget(target) {
   if (!target || /s$/.test(target)) return null
   const clean = target.replace(/\/.*$/, '').trim()
@@ -8,13 +15,43 @@ export function parseRepsTarget(target) {
   return null
 }
 
-// Returns { weight, increased } — the suggested weight for next set based on last session
-export function suggestedWeight(previousLog, repsTarget) {
-  if (!previousLog?.weight_kg) return null
-  const range = parseRepsTarget(repsTarget)
-  if (!range) return { weight: previousLog.weight_kg, increased: false }
-  const hitTop = previousLog.reps_done != null && previousLog.reps_done >= range.max
+export function progressionMode(exercise) {
+  return exercise?.progression_mode === MODE_REPS ? MODE_REPS : MODE_WEIGHT
+}
+
+// Cible de la prochaine séance, selon le mode de progression de l'exo.
+//   mode 'weight' : reps plafonnées par reps_target, la CHARGE monte de 2kg
+//   mode 'reps'   : charge figée, les REPS montent de 1
+// Retourne { mode, weight, reps, increased, atCeiling } ou null si pas d'historique.
+export function nextTarget(previousLog, exercise) {
+  if (!previousLog) return null
+  const mode = progressionMode(exercise)
   const goodRIR = previousLog.rir == null || previousLog.rir >= 2
+
+  if (mode === MODE_REPS) {
+    if (previousLog.reps_done == null) return null
+    const atCeiling = previousLog.reps_done >= REPS_CEILING
+    const increased = goodRIR && !atCeiling
+    return {
+      mode: MODE_REPS,
+      weight: previousLog.weight_kg ?? null,
+      reps: increased ? previousLog.reps_done + 1 : previousLog.reps_done,
+      increased,
+      atCeiling,
+    }
+  }
+
+  if (!previousLog.weight_kg) return null
+  const range = parseRepsTarget(exercise?.reps_target)
+  if (!range) return { mode: MODE_WEIGHT, weight: previousLog.weight_kg, reps: null, increased: false, atCeiling: false }
+
+  const hitTop = previousLog.reps_done != null && previousLog.reps_done >= range.max
   const increased = hitTop && goodRIR
-  return { weight: increased ? previousLog.weight_kg + 2 : previousLog.weight_kg, increased }
+  return {
+    mode: MODE_WEIGHT,
+    weight: increased ? previousLog.weight_kg + 2 : previousLog.weight_kg,
+    reps: null,
+    increased,
+    atCeiling: false,
+  }
 }

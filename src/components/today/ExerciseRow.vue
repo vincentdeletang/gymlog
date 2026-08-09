@@ -3,7 +3,7 @@ import { ref, computed, watch } from 'vue'
 import SetButton from './SetButton.vue'
 import ExerciseNotes from '@/components/shared/ExerciseNotes.vue'
 import { useWorkoutStore } from '@/stores/useWorkoutStore'
-import { suggestedWeight } from '@/lib/progression'
+import { nextTarget, MODE_REPS } from '@/lib/progression'
 import { isTimed as isTimedTarget } from '@/lib/parseTarget'
 
 const props = defineProps({
@@ -34,9 +34,27 @@ function toggleCollapse() {
 const timed = computed(() => isTimedTarget(props.exercise.reps_target))
 
 const suggestion = computed(() => {
-  if (props.exercise.is_bodyweight || props.exercise.section === 'rehab') return null
+  if (props.exercise.section === 'rehab' || timed.value) return null
   const prev = workoutStore.getPreviousSet(props.exercise.id, 1)
-  return suggestedWeight(prev, props.exercise.reps_target)
+  return nextTarget(prev, props.exercise)
+})
+
+const repsMode = computed(() => suggestion.value?.mode === MODE_REPS)
+
+// En mode reps la plage `reps_target` ne pilote plus rien : l'objectif du jour vient
+// de la séance précédente. Afficher "4×10-12" alors qu'il vise 15 serait faux.
+const setsLabel = computed(() =>
+  repsMode.value && suggestion.value.reps != null
+    ? `${props.exercise.sets_target}×${suggestion.value.reps}`
+    : `${props.exercise.sets_target}×${props.exercise.reps_target}`
+)
+
+const suggestionLabel = computed(() => {
+  const s = suggestion.value
+  if (!s) return null
+  if (s.mode !== MODE_REPS) return `${s.increased ? '↑' : '='} ${s.weight}kg`
+  const load = s.weight != null ? `${s.weight}kg · ` : ''
+  return `🔒 ${load}${s.increased ? '↑' : '='} ${s.reps} reps`
 })
 
 const SECTION_BADGE = {
@@ -60,10 +78,10 @@ const SECTION_BADGE = {
       </div>
       <div class="ex-meta">
         <span v-if="collapsed" class="done-check">✓</span>
-        <span class="ex-sets">{{ exercise.sets_target }}×{{ exercise.reps_target }}</span>
+        <span class="ex-sets">{{ setsLabel }}</span>
         <span v-if="!collapsed && exercise.is_bodyweight" class="bw-badge">BW</span>
-        <span v-if="!collapsed && suggestion" class="weight-suggestion" :class="{ increased: suggestion.increased }">
-          {{ suggestion.increased ? '↑' : '=' }} {{ suggestion.weight }}kg
+        <span v-if="!collapsed && suggestionLabel" class="weight-suggestion" :class="{ increased: suggestion.increased, reps: repsMode }">
+          {{ suggestionLabel }}
         </span>
         <span v-if="allLogged" class="collapse-chevron" :class="{ open: !collapsed }">▾</span>
       </div>
@@ -217,6 +235,10 @@ const SECTION_BADGE = {
 .weight-suggestion.increased {
   color: #10b981;
   background: rgba(16, 185, 129, 0.1);
+}
+
+.weight-suggestion.reps {
+  letter-spacing: 0;
 }
 
 .sets-row {

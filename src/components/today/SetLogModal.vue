@@ -1,6 +1,7 @@
 <script setup>
 import { ref, computed, watch, onUnmounted } from 'vue'
-import { parseRepsTarget } from '@/lib/progression'
+import { nextTarget, progressionMode, parseRepsTarget, MODE_WEIGHT, MODE_REPS, REPS_CEILING } from '@/lib/progression'
+import { useProgramStore } from '@/stores/useProgramStore'
 import { decomposeWeight, formatDecomposition } from '@/lib/plateCalc'
 import ExerciseNotes from '@/components/shared/ExerciseNotes.vue'
 
@@ -37,11 +38,13 @@ watch([() => props.existingLog, () => props.sessionPrevSet, () => props.previous
     repsDone.value = prev.reps_done ?? ''
     rir.value = prev.rir ?? 2
   } else if (last?.weight_kg) {
-    // First set of session → suggest weight based on progression
-    const range = parseRepsTarget(props.exercise?.reps_target)
-    const hitTop = range && last.reps_done != null && last.reps_done >= range.max
-    const goodRIR = last.rir == null || last.rir >= 2
-    weightKg.value = (hitTop && goodRIR) ? String(last.weight_kg + 2) : String(last.weight_kg)
+    // First set of session → charge pré-remplie selon la progression.
+    // Les reps ne sont JAMAIS pré-remplies, même en mode reps : la charge se vérifie
+    // sur la barre, les reps se comptent. Pré-remplir un objectif de reps le
+    // transformerait en donnée tapée par réflexe, et c'est cette donnée qui pilote
+    // toute la progression. L'objectif est affiché dans le badge à la place.
+    const next = nextTarget(last, props.exercise)
+    weightKg.value = String(next?.weight ?? last.weight_kg)
     repsDone.value = ''
     rir.value = 2
   } else {
@@ -69,29 +72,54 @@ const plateBreakdown = computed(() => {
   return hasBar ? `${formatted} kg par côté` : `${formatted} kg`
 })
 
+const mode = computed(() => progressionMode(props.exercise))
+const canSwitchMode = computed(() =>
+  props.exercise?.section === 'main' && !!props.previousLog
+)
+
 const progression = computed(() => {
-  if (!props.previousLog || props.exercise?.is_bodyweight) return null
+  if (!props.previousLog) return null
   const prev = props.previousLog
-  if (!prev.weight_kg) return null
+  const next = nextTarget(prev, props.exercise)
+  if (!next) return null
 
-  const range = parseRepsTarget(props.exercise?.reps_target)
+  const load = prev.weight_kg != null ? `${prev.weight_kg}kg × ` : ''
 
-  if (!range) {
-    // Timed exercise — just show last weight
-    return { icon: '📊', text: `Dernière fois : ${prev.weight_kg}kg`, color: '#9ca3af' }
-  }
-
-  const hitTop = prev.reps_done != null && prev.reps_done >= range.max
-  const goodRIR = prev.rir == null || prev.rir >= 2
-
-  if (hitTop && goodRIR) {
+  if (next.mode === MODE_REPS) {
+    if (next.atCeiling) {
+      return {
+        icon: '🏁',
+        text: `${load}${prev.reps_done} reps — plafond atteint. Reste ici, ou +2kg et tu repars plus bas.`,
+        color: '#f59e0b',
+      }
+    }
+    if (!next.increased) {
+      return {
+        icon: '⚠️',
+        text: `${load}${prev.reps_done} reps à RIR ${prev.rir} — maintiens ${prev.reps_done}`,
+        color: '#f59e0b',
+      }
+    }
     return {
-      icon: '🚀',
-      text: `${prev.weight_kg}kg × ${prev.reps_done} reps — Augmente → ${prev.weight_kg + 2}kg`,
+      icon: '🎯',
+      text: `${load}${prev.reps_done} reps — Objectif : ${next.reps} reps`,
       color: '#10b981',
     }
   }
-  if (hitTop && !goodRIR) {
+
+  if (props.exercise?.is_bodyweight) return null
+
+  const range = parseRepsTarget(props.exercise?.reps_target)
+  if (!range) return { icon: '📊', text: `Dernière fois : ${prev.weight_kg}kg`, color: '#9ca3af' }
+
+  if (next.increased) {
+    return {
+      icon: '🚀',
+      text: `${prev.weight_kg}kg × ${prev.reps_done} reps — Augmente → ${next.weight}kg`,
+      color: '#10b981',
+    }
+  }
+  if (prev.reps_done != null && prev.reps_done >= range.max) {
     return {
       icon: '⚠️',
       text: `${prev.weight_kg}kg × ${prev.reps_done} reps mais RIR ${prev.rir} — maintiens`,
@@ -104,6 +132,17 @@ const progression = computed(() => {
     color: '#3b82f6',
   }
 })
+
+async function switchMode() {
+  const programStore = useProgramStore()
+  const target = mode.value === MODE_REPS ? MODE_WEIGHT : MODE_REPS
+  const w = props.previousLog?.weight_kg
+  const msg = target === MODE_REPS
+    ? `Passer « ${props.exercise.name} » en progression REPS ?\n\nLa charge reste à ${w ?? '?'}kg et l'objectif monte d'1 rep par séance (plafond ${REPS_CEILING}).`
+    : `Repasser « ${props.exercise.name} » en progression CHARGE ?\n\nLes reps repassent sur la plage ${props.exercise.reps_target} et la charge remonte de 2kg quand tu tapes le haut.`
+  if (!window.confirm(msg)) return
+  await programStore.updateProgressionMode(props.exercise.id, target)
+}
 
 function save() {
   emit('save', {
@@ -153,6 +192,14 @@ onUnmounted(() => {
             <div v-if="progression" class="progression-badge" :style="{ color: progression.color, borderColor: progression.color + '44', background: progression.color + '11' }">
               {{ progression.icon }} {{ progression.text }}
             </div>
+            <button v-if="canSwitchMode" type="button" class="mode-switch" @click="switchMode">
+              <template v-if="mode === MODE_REPS">
+                Progression <strong>reps</strong> — charge figée · <span class="mode-alt">passer en charge</span>
+              </template>
+              <template v-else>
+                Progression <strong>charge</strong> — +2kg au max de la plage · <span class="mode-alt">figer la charge</span>
+              </template>
+            </button>
           </div>
 
           <!-- Weight field (hidden if bodyweight) -->
@@ -322,6 +369,29 @@ onUnmounted(() => {
   border-radius: 8px;
   border: 1px solid;
   letter-spacing: 0.3px;
+}
+
+.mode-switch {
+  width: 100%;
+  margin-top: 6px;
+  background: transparent;
+  border: 1px dashed #374151;
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 13px;
+  color: #9ca3af;
+  text-align: left;
+  cursor: pointer;
+}
+
+.mode-switch strong {
+  color: #e5e7eb;
+}
+
+.mode-alt {
+  color: #60a5fa;
+  text-decoration: underline;
 }
 
 .field {

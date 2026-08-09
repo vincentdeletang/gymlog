@@ -24,6 +24,7 @@ function fmtSets(ex) {
   if (ex.is_per_side) suffix = ' par côté'
   if (ex.is_bodyweight) suffix += ' [bodyweight]'
   else if (ex.bars) suffix += ` [équipement : ${ex.bars.name} (tare ${ex.bars.weight_kg}kg) + plaques chargées progressivement]`
+  if (ex.progression_mode === 'reps') suffix += ' [progression REPS : charge figée volontairement, +1 rep/séance]'
   return `${sets}×${reps}${suffix}`
 }
 
@@ -65,6 +66,11 @@ export function buildMarkdownExport({ profileData, programDays, exercises, cardi
   lines.push('- L\'utilisateur travaille en RIR 2-3 (2 à 3 reps en réserve avant l\'échec)')
   lines.push('- Quand il atteint le top de la plage de reps cible (ex: 12 sur 10-12) avec RIR ≥ 2, il ajoute **+2kg minimum** à la séance suivante')
   lines.push('- Disques disponibles : 20 / 15 / 10 / 5 / 2.5 / 1.25 / 1 kg')
+  lines.push('')
+  lines.push('Chaque exercice a un **mode de progression** (marqué ci-dessous quand il diffère du défaut) :')
+  lines.push('')
+  lines.push('- **charge** (défaut) : reps plafonnées par la plage cible, la charge monte de +2kg')
+  lines.push('- **reps** : la charge est volontairement **figée** (le user juge qu\'elle est assez lourde et ne veut pas pousser plus haut — priorité anti-blessure), et c\'est l\'objectif de **reps qui monte de +1 par séance**, jusqu\'à 20. La surcharge progressive continue donc, sur l\'autre variable.')
   lines.push('')
   lines.push('Donc **ne juge pas l\'intensité du programme à partir de ces valeurs de tare** — la surcharge progressive réelle est appliquée. Concentre-toi sur la structure, le volume, la sélection des exercices, l\'équilibre push/pull, et la pertinence vis-à-vis du profil et des objectifs.')
   lines.push('')
