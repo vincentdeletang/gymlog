@@ -1767,3 +1767,120 @@ BEGIN
      AND name = 'Inverted row (barres de sécurité)';
 END $$;
 ```
+
+---
+
+## 45. Migration 043 — Retour d'un pressing (pompes) + volume bras + date de sortie de l'iso
+
+> **Le budget bras n'avait jamais été recompté après les drops.** Le plafond « 10-13 sets effectifs/sem par bras » de CLAUDE.md compte l'**indirect** (développé→triceps, tirage→biceps). Or les deux compounds qui le fournissaient ont sauté : développé incliné le 05/06 (039, épaule G) puis tirage le 17/06 (042, 5 variantes échouées). Chaque décision était bonne isolément, mais l'addition n'a jamais été refaite : **biceps 6 directs + 0 indirect, triceps 7 directs + 0 indirect** — soit ~30-40 % de stimulus bras perdu sans que ce soit décidé. Le user l'a senti ("je devrais ptete faire plus de bras").
+>
+> **Déficit : il n'y en a pas.** Le user ne perd pas de poids → il est à l'entretien, pas en déficit (le poids sur 2-3 semaines est le seul arbitre). La récup n'est donc plus plafonnée, et CLAUDE.md dit explicitement de proposer d'augmenter le volume bras à ce moment-là.
+>
+> **1. Vendredi — ADD « Pompes mains surélevées (banc) » 3×8-15** (order 6, avant les triceps).
+> - *Pas la barre* (demandée par le user) : à 1m97 l'amplitude n'est pas plafonnable — la barre s'arrête sur la poitrine, donc coudes forcément derrière la ligne du torse = la position qui irrite le chef long (039), et c'est déjà ce qui lui avait niqué l'épaule en salle. Plus : seul, sans pareur, sur un rack assez léger pour se soulever (042) → barre chargée au-dessus de la gorge = non.
+> - *Pas le développé haltère* (option pré-tranchée CLAUDE.md) : un seul haltère → unilatéral → 3 séries = 6 en temps réel. Cher pour un muscle non-prioritaire quand la contrainte n°1 est la durée.
+> - *Mains surélevées, pas au sol* : le sol du garage avait fait refuser le floor press.
+> - *Pourquoi c'est le bon choix* : chaîne fermée → **omoplates libres** (vs plaquées sur un banc) ; le banc **empêche physiquement** les coudes de passer derrière le torse ; pattern décliné = le pressing le moins stressant pour l'épaule antérieure ; ~75-80 kg poussés à 136 kg de poids de corps ; zéro setup ; s'allège tout seul avec la perte de gras (comme l'inverted row de 040).
+> - *Order 6 = avant les triceps* : seul exo qui donne quelque chose au pec → doit être fait frais, et son apport triceps indirect est précisément ce qu'on restaure. Coût = un peu moins de charge sur l'isolation derrière (le compromis le moins cher).
+>
+> **2. Lundi — Curl barre EZ + Curl hammer 3 → 4 séries** (biceps 6 → 8 sets/bras). Annule le cut de la 030, qui était justifié par le déficit. Le triceps garde l'avantage (7 directs + indirect pompes ≈ 9-10 vs 8). Des séries sur les exos existants plutôt qu'un nouvel exo : rien à apprendre, pas de setup, ~6 min sur la séance la plus courte de la semaine. Le curl concentré (droppé en 030) reste disponible pour passer à 10 plus tard.
+>
+> **3. Lundi + Vendredi — Face pulls 2 → 3 séries.** Le slot tirage reste **fermé** (042 confirmé par le user : le rack élimine définitivement l'inverted row). Mais on réintroduit un pressing, donc le contrepoids postural — seule vraie perte listée en 042 — redevient d'actualité. Annule le cut de 035. Ce n'est pas du dos, c'est de la rétraction scapulaire.
+>
+> **4. Lundi + Vendredi — Iso biceps : date de sortie dans le nom.** Ajoutée le 05/06 comme « temporaire », on est le 09/08 : 9 semaines, elle meurt d'inertie. On ne la retire pas *maintenant* parce qu'elle a été ajoutée le jour même où on retirait le développé incliné → impossible de savoir si l'épaule est calme grâce à elle ou grâce au retrait de l'exo (hypothèse : 3×30s 2×/sem est une dose faible pour du protocole tendineux type Baar). Et cette migration réintroduit un pressing : retirer le filet et remettre l'exo suspect la même semaine = si ça flambe, on ne saura pas lequel accuser. Donc gardée 4 semaines comme variable de contrôle, avec le critère d'arrêt **dans le nom** (`Isométrie biceps (stop le 06/09)`) et dans la note. C'est l'app qui se souvient, pas le user.
+>
+> **Note** : le rename préserve l'historique (`set_logs` liés par `exercise_id`, pas par nom). Aucun `set_log` supprimé dans cette migration.
+
+```sql
+-- 1) VENDREDI — ADD pompes mains surélevées (order 6, avant les triceps)
+DO $$
+DECLARE
+  d_vendredi UUID;
+BEGIN
+  SELECT pd.id INTO d_vendredi
+    FROM program_days pd JOIN programs p ON p.id = pd.program_id
+   WHERE p.is_active = true AND pd.day_of_week = 5;
+
+  IF NOT EXISTS (SELECT 1 FROM exercises WHERE program_day_id = d_vendredi AND name = 'Pompes mains surélevées (banc)') THEN
+    INSERT INTO exercises (program_day_id, name, order_index, sets_target, reps_target, is_bodyweight, notes, section, muscle_group, is_per_side)
+    VALUES (
+      d_vendredi,
+      'Pompes mains surélevées (banc)',
+      6,
+      3,
+      '8-15',
+      true,
+      'Cible : pec. Triceps en indirect.
+
+SETUP : banc PLAT (cran 1). Mains sur le banc, largeur épaules ou un peu plus, pieds au sol, corps gainé droit de la tête aux talons. Pas au sol : sur le banc.
+
+EXÉCUTION : descendre la poitrine vers le bord du banc, coudes à ~45° du corps (pas écartés à 90°). Ne force pas plus bas que le banc ne te laisse aller — c''est justement lui qui t''empêche de passer les coudes derrière le torse (la position qui agace l''épaule G). Remontée contrôlée, sans verrouiller sec.
+
+CHARGE : mains hautes = plus facile. Le banc plat te fait pousser ~75-80kg à ton poids, c''est déjà du lourd.
+
+PROGRESSION : d''abord les reps (jusqu''à 15). Quand tu tapes 15 propre sur les 3 séries, tu descends les mains d''un cran (barres de sécurité plus bas). Et ça s''allège tout seul à mesure que tu perds du gras.
+
+ÉPAULE : si ça pique comme le développé incliné, tu me le dis — on drop, on aura la réponse en une séance.',
+      'main',
+      'chest',
+      false
+    );
+  END IF;
+END $$;
+
+-- 2) LUNDI — volume biceps 6 → 8 sets/bras
+DO $$
+DECLARE
+  d_lundi UUID;
+BEGIN
+  SELECT pd.id INTO d_lundi
+    FROM program_days pd JOIN programs p ON p.id = pd.program_id
+   WHERE p.is_active = true AND pd.day_of_week = 1;
+
+  UPDATE exercises
+     SET sets_target = 4
+   WHERE program_day_id = d_lundi
+     AND name IN ('Curl barre EZ (supination)', 'Curl haltères hammer');
+END $$;
+
+-- 3) LUNDI + VENDREDI — face pulls 2 → 3 séries
+DO $$
+DECLARE
+  d_lundi    UUID;
+  d_vendredi UUID;
+BEGIN
+  SELECT pd.id INTO d_lundi    FROM program_days pd JOIN programs p ON p.id=pd.program_id WHERE p.is_active=true AND pd.day_of_week=1;
+  SELECT pd.id INTO d_vendredi FROM program_days pd JOIN programs p ON p.id=pd.program_id WHERE p.is_active=true AND pd.day_of_week=5;
+
+  UPDATE exercises
+     SET sets_target = 3
+   WHERE program_day_id IN (d_lundi, d_vendredi)
+     AND name = 'Face pulls élastique';
+END $$;
+
+-- 4) LUNDI + VENDREDI — iso biceps : date de sortie dans le nom + note
+DO $$
+DECLARE
+  d_lundi    UUID;
+  d_vendredi UUID;
+BEGIN
+  SELECT pd.id INTO d_lundi    FROM program_days pd JOIN programs p ON p.id=pd.program_id WHERE p.is_active=true AND pd.day_of_week=1;
+  SELECT pd.id INTO d_vendredi FROM program_days pd JOIN programs p ON p.id=pd.program_id WHERE p.is_active=true AND pd.day_of_week=5;
+
+  UPDATE exercises
+     SET name  = 'Isométrie biceps (stop le 06/09)',
+         notes = '⏳ DATE DE SORTIE : 06/09/2026.
+
+Pourquoi elle est encore là : ajoutée le 05/06 en même temps qu''on retirait le développé incliné — impossible de savoir si c''est elle qui a calmé l''épaule ou juste le retrait de l''exo. On la garde le temps de réintroduire un pressing (pompes mains surélevées, vendredi).
+
+RÈGLE D''ARRÊT : 4 séances de pompes sans douleur à l''épaule G → on la supprime (migration). Si la douleur revient → c''est le pressing le coupable, pas l''iso, et c''est le pressing qui saute.
+
+POSITION : milieu d''un curl tenu STATIQUE. Coude collé au corps à ~90° (avant-bras // sol), paume vers le haut (supinée). Tu ne montes ni ne descends, tu RÉSISTES immobile ~30s.
+
+CHARGE : ton poids de curl pour un set dur de 8-12 reps. Ça doit devenir vraiment dur sur les 10 dernières secondes (RPE 7-8) mais tenable sans douleur > 3/10. Trop facile à 30s = trop léger.
+
+Supination qui tire sur l''épaule ? → prise neutre (hammer).'
+   WHERE program_day_id IN (d_lundi, d_vendredi)
+     AND name = 'Isométrie biceps (temporaire)';
+END $$;
+```
