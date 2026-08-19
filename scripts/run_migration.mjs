@@ -1,24 +1,13 @@
 // Applique un ou plusieurs fichiers de migration SQL directement sur la base Supabase.
 //
 //   node scripts/run_migration.mjs supabase/migrations/045_mercredi_front_squat.sql
-//   node scripts/run_migration.mjs supabase/migrations/0*.sql
+//   node scripts/run_migration.mjs supabase/migrations/04{5,6}_*.sql
 //
 // Chaque fichier est exécuté dans SA PROPRE transaction : soit tout passe, soit rien.
-// Nécessite GYMLOG_DB_URL dans .env (Supabase Dashboard -> Connect -> connection string).
+// Nécessite GYMLOG_DB_URL dans .env (Supabase Dashboard -> Connect -> Session pooler).
 
 import fs from 'fs'
-import pg from 'pg'
-
-const env = Object.fromEntries(
-  fs.readFileSync('.env', 'utf8').split('\n')
-    .filter(l => l.includes('=') && !l.trimStart().startsWith('#'))
-    .map(l => [l.slice(0, l.indexOf('=')).trim(), l.slice(l.indexOf('=') + 1).trim()])
-)
-
-if (!env.GYMLOG_DB_URL) {
-  console.error('GYMLOG_DB_URL manquant dans .env')
-  process.exit(1)
-}
+import { makeClient } from './db.mjs'
 
 const files = process.argv.slice(2)
 if (!files.length) {
@@ -26,11 +15,8 @@ if (!files.length) {
   process.exit(1)
 }
 
-const client = new pg.Client({
-  connectionString: env.GYMLOG_DB_URL,
-  ssl: { rejectUnauthorized: false },
-})
-
+const client = makeClient()
+client.on('notice', n => console.log('   notice:', n.message))
 await client.connect()
 console.log('connecté')
 
@@ -39,10 +25,9 @@ for (const file of files) {
   const sql = fs.readFileSync(file, 'utf8')
   try {
     await client.query('BEGIN')
-    const res = await client.query(sql)
+    await client.query(sql)
     await client.query('COMMIT')
-    const notices = Array.isArray(res) ? res.length : 1
-    console.log(`OK  ${file} (${notices} statement(s))`)
+    console.log(`OK   ${file}`)
   } catch (err) {
     await client.query('ROLLBACK')
     console.error(`FAIL ${file}\n     ${err.message}`)
