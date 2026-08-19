@@ -1955,9 +1955,11 @@ END $$;
 >
 > **Épaule G** : prise **bras croisés**, jamais prise olympique. Pas de rotation externe → n'agace pas le chef long du biceps (039). L'épaule en flexion n'a jamais posé problème (040).
 >
-> **SLDL conservé** : seul travail chaîne postérieure, et des lombaires faibles se renforcent en étant entraînées, pas en étant évitées. Le front squat étant nettement moins lombaire que le back squat, le cumul passe à 3 séries chacun. Bénéfice collatéral du nouveau matos : **le SLDL se désenquille aussi** → le 2e ramassage au sol de la séance disparaît en même temps que le premier. Note mise à jour en conséquence.
+> **SLDL conservé** : seul travail chaîne postérieure, et des lombaires faibles se renforcent en étant entraînées, pas en étant évitées. Le front squat étant nettement moins lombaire que le back squat, le cumul passe à 3 séries chacun. Bénéfice collatéral du nouveau matos : **le SLDL se désenquille aussi** → le 2e ramassage au sol de la séance disparaît en même temps que le premier (note traitée en 046).
 >
-> **`set_logs` du goblet supprimés** (précédent 032). Volontaire : réutiliser la ligne aurait fait hériter 42 kg au front squat, donc une suggestion à 44 kg dès la 1ère séance sur un mouvement jamais pratiqué. Repart de zéro, 20-30 kg barre comprise.
+> **Mise à jour en place (≠ delete + insert)** : la RLS n'ouvre que `UPDATE` sur `exercises` (017), pas `INSERT` ni `DELETE`. On réécrit donc la ligne du goblet au lieu de la remplacer — ce qui rend la migration applicable depuis un **client authentifié normal**, sans `service_role`. Effet de bord bienvenu : `order_index` et FK préservés.
+>
+> **`set_logs` du goblet purgés** — 45 lignes, sauvegardées dans `supabase/backups/goblet_squat_set_logs.json`. Obligatoire : en gardant l'historique, `progression.js` lirait 42 kg et proposerait **44 kg** dès la 1ère séance d'un mouvement jamais pratiqué.
 >
 > Progression en mode `weight` (exo neuf, la charge doit remonter). Bascule en `reps` possible depuis l'app quand la charge sera jugée assez lourde (044).
 
@@ -1965,6 +1967,7 @@ END $$;
 DO $$
 DECLARE
   d_mercredi UUID;
+  ex_id      UUID;
   bar_droite UUID;
 BEGIN
   SELECT pd.id INTO d_mercredi
@@ -1973,34 +1976,29 @@ BEGIN
 
   SELECT id INTO bar_droite FROM bars WHERE name = 'Barre droite';
 
-  DELETE FROM set_logs
-   WHERE exercise_id IN (
-     SELECT id FROM exercises
-      WHERE program_day_id = d_mercredi AND name = 'Goblet squat'
-   );
-
-  DELETE FROM exercises
+  SELECT id INTO ex_id FROM exercises
    WHERE program_day_id = d_mercredi AND name = 'Goblet squat';
 
-  INSERT INTO exercises
-    (program_day_id, name, order_index, sets_target, reps_target, is_bodyweight,
-     notes, section, muscle_group, bar_id, progression_mode)
-  SELECT d_mercredi, 'Front squat (barre)', 1, 3, '8', false,
-    'Barre sur les deltoïdes avant, prise BRAS CROISÉS (jamais prise olympique). '
-    'Supports à hauteur d''épaule pour désenquiller, barres de sécurité en position basse = bail-out. '
-    'Coudes hauts, torse vertical, descente jusqu''à parallèle (cuisses //sol). '
-    'Repars léger : 20-30 kg barre comprise le temps de caler la position.',
-    'main', 'quads', bar_droite, 'weight'
-  WHERE NOT EXISTS (
-    SELECT 1 FROM exercises
-     WHERE program_day_id = d_mercredi AND name = 'Front squat (barre)'
-  );
+  IF ex_id IS NULL THEN
+    RAISE NOTICE 'Goblet squat introuvable — migration déjà appliquée ?';
+    RETURN;
+  END IF;
+
+  DELETE FROM set_logs WHERE exercise_id = ex_id;
 
   UPDATE exercises
-     SET notes = 'Barre désenquillée à hauteur de hanche sur les supports — plus de ramassage au sol. '
-                 'Dos plat, descente contrôlée le long des jambes, étirement ischio en bas.'
-   WHERE program_day_id = d_mercredi
-     AND name = 'Soulevé de terre jambes tendues (barre)';
+     SET name             = 'Front squat (barre)',
+         sets_target      = 3,
+         reps_target      = '8',
+         is_bodyweight    = false,
+         muscle_group     = 'quads',
+         bar_id           = bar_droite,
+         progression_mode = 'weight',
+         notes            = 'Barre sur les deltoïdes avant, prise BRAS CROISÉS (jamais prise olympique). '
+                            'Supports à hauteur d''épaule pour désenquiller, barres de sécurité en position basse = bail-out. '
+                            'Coudes hauts, torse vertical, descente jusqu''à parallèle (cuisses //sol). '
+                            'Repars léger : 20-30 kg barre comprise le temps de caler la position.'
+   WHERE id = ex_id;
 END $$;
 ```
 
