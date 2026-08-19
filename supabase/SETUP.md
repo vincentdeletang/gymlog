@@ -1940,3 +1940,66 @@ BEGIN
      AND name = 'Curl barre EZ (supination)';
 END $$;
 ```
+
+---
+
+## 47. Migration 045 — Mercredi : Goblet squat → Front squat (barre)
+
+> Le goblet squat a atteint **42 kg**. Le user signale que le mouvement passe très bien, mais que **monter l'haltère du sol à la poitrine** est devenu le point dangereux : mini-deadlift dos rond, en début de séance, avec des lombaires déjà faibles. Verbatim : « 42kg c'est déjà trop pour lever l'haltère ». C'est le **plafond structurel du goblet**, pas un plafond de force — figer la charge (mode `reps` de la 044) réglerait l'aggravation mais pas le risque, il faudrait toujours ramasser 42 kg chaque mercredi.
+>
+> **Le goblet n'a jamais été choisi contre le squat barre.** Vérification faite : la 009 l'a *ajouté* (jour jambes trop léger), pas substitué. La morpho 1m97 n'est intervenue que dans la 026, et uniquement pour calibrer la **profondeur** (parallèle stricte, pas plus bas si butt wink). Aucune migration n'a évalué ni rejeté le squat barre → pas de décision passée à contredire.
+>
+> **Front et pas back.** L'a priori du user (« ça va me niquer le corps ») est fondé, mais il vise le back squat : à 1m97, fémurs longs + stockage abdominal, la barre sur le dos impose un torse penché pour garder la barre sur le milieu du pied → cisaillement lombaire. Le front squat n'a pas ce problème — charge à l'avant, donc si le torse penche la barre tombe. Le mouvement est **auto-correcteur**, exactement la contrainte qui rendait le goblet safe pour lui. Un front squat = son goblet squat avec le problème de chargement résolu.
+>
+> **Sécurité (nouveau matos).** Le user peut monter ses barres de sécurité au-dessus de sa tête et dispose de 2 supports mobiles en plus. Setup : supports à hauteur d'épaule pour désenquiller, barres de sécurité en position basse = bail-out. Le rack léger qui **se soulevait** en 042 n'est pas un problème ici : l'inverted row *tirait vers le haut*, le squat *pousse vers le bas* — cas nominal d'un rack.
+>
+> **Épaule G** : prise **bras croisés**, jamais prise olympique. Pas de rotation externe → n'agace pas le chef long du biceps (039). L'épaule en flexion n'a jamais posé problème (040).
+>
+> **SLDL conservé** : seul travail chaîne postérieure, et des lombaires faibles se renforcent en étant entraînées, pas en étant évitées. Le front squat étant nettement moins lombaire que le back squat, le cumul passe à 3 séries chacun. Bénéfice collatéral du nouveau matos : **le SLDL se désenquille aussi** → le 2e ramassage au sol de la séance disparaît en même temps que le premier. Note mise à jour en conséquence.
+>
+> **`set_logs` du goblet supprimés** (précédent 032). Volontaire : réutiliser la ligne aurait fait hériter 42 kg au front squat, donc une suggestion à 44 kg dès la 1ère séance sur un mouvement jamais pratiqué. Repart de zéro, 20-30 kg barre comprise.
+>
+> Progression en mode `weight` (exo neuf, la charge doit remonter). Bascule en `reps` possible depuis l'app quand la charge sera jugée assez lourde (044).
+
+```sql
+DO $$
+DECLARE
+  d_mercredi UUID;
+  bar_droite UUID;
+BEGIN
+  SELECT pd.id INTO d_mercredi
+    FROM program_days pd JOIN programs p ON p.id = pd.program_id
+   WHERE p.is_active = true AND pd.day_of_week = 3;
+
+  SELECT id INTO bar_droite FROM bars WHERE name = 'Barre droite';
+
+  DELETE FROM set_logs
+   WHERE exercise_id IN (
+     SELECT id FROM exercises
+      WHERE program_day_id = d_mercredi AND name = 'Goblet squat'
+   );
+
+  DELETE FROM exercises
+   WHERE program_day_id = d_mercredi AND name = 'Goblet squat';
+
+  INSERT INTO exercises
+    (program_day_id, name, order_index, sets_target, reps_target, is_bodyweight,
+     notes, section, muscle_group, bar_id, progression_mode)
+  SELECT d_mercredi, 'Front squat (barre)', 1, 3, '8', false,
+    'Barre sur les deltoïdes avant, prise BRAS CROISÉS (jamais prise olympique). '
+    'Supports à hauteur d''épaule pour désenquiller, barres de sécurité en position basse = bail-out. '
+    'Coudes hauts, torse vertical, descente jusqu''à parallèle (cuisses //sol). '
+    'Repars léger : 20-30 kg barre comprise le temps de caler la position.',
+    'main', 'quads', bar_droite, 'weight'
+  WHERE NOT EXISTS (
+    SELECT 1 FROM exercises
+     WHERE program_day_id = d_mercredi AND name = 'Front squat (barre)'
+  );
+
+  UPDATE exercises
+     SET notes = 'Barre désenquillée à hauteur de hanche sur les supports — plus de ramassage au sol. '
+                 'Dos plat, descente contrôlée le long des jambes, étirement ischio en bas.'
+   WHERE program_day_id = d_mercredi
+     AND name = 'Soulevé de terre jambes tendues (barre)';
+END $$;
+```
