@@ -116,13 +116,16 @@ export const useProgramStore = defineStore('program', () => {
   }
 
   async function updateProgressionMode(exerciseId, mode) {
+    const patch = mode === 'weight'
+      ? { progression_mode: mode, hold_weight_kg: null }
+      : { progression_mode: mode }
     const { error } = await supabase
       .from('exercises')
-      .update({ progression_mode: mode })
+      .update(patch)
       .eq('id', exerciseId)
     if (!error) {
       const ex = exercises.value.find(e => e.id === exerciseId)
-      if (ex) ex.progression_mode = mode
+      if (ex) Object.assign(ex, patch)
     }
     return !error
   }

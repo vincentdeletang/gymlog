@@ -2029,3 +2029,19 @@ BEGIN
      AND name = 'Soulevé de terre jambes tendues (barre)';
 END $$;
 ```
+
+## 49. Migration 047 — Charge figée explicite (mercredi), gainage lundi, prehab épaule au minimum
+
+> **Contexte** : réveils « cassé de partout », lombaires ressenties faibles en portant sa fille. Les logs pointent **un** suspect : le SLDL est monté de **+2 kg chaque semaine pendant 8 semaines** (30 → 50 kg de disques, 40 → 60 kg réels), toujours logué 3×12 RIR 2. Seul exo qui charge les lombaires, seul exo dont la charge s'est envolée — l'app en mode `weight` proposait +2 kg mécaniquement.
+>
+> **Décision du user** : figer les 3 exos barre du mercredi à une charge **facile**, 10 kg de chaque côté (20 kg de disques + barre = 30 kg). Une seule barre chargée pour toute la séance : front squat → SLDL → mollets.
+>
+> **Colonne `exercises.hold_weight_kg`** : le mode `reps` (044) fige la charge sur le *dernier log*. Ici on fige **plus bas** que le dernier log (50 → 20) — sans colonne, l'app pré-remplirait 50. `NULL` = comportement 044 inchangé. Tant que le dernier log n'est pas à la charge figée, l'objectif reps est remis sur la plage `reps_target`. Repasser en mode `weight` depuis l'app remet la colonne à `NULL`.
+>
+> **Lundi — ADD Bird dog 2×8/côté + Side plank 2×20-30s/côté** (section `rehab`, tap-to-log) : le gainage se résumait à dead bug (mer) + plank (ven). Porter un enfant sur une hanche = anti-flexion latérale, non travaillée. Trio de McGill complété. Lundi = séance la plus courte, zéro gainage, et le retrait de la prehab libère plus de temps que ces 4 sets n'en prennent.
+>
+> **Lundi + vendredi — prehab épaule 10 sets → 4 sets** (80/20) : DROP rotations externes (redondant avec les face pulls) et isométrie biceps (date de sortie 06/09 atteinte, critère 043 rempli). GARDÉ face pulls 3×15 → 2×15 + rotation interne 2×15 (seul exo qui cible le subscapulaire / chef long du biceps). Set_logs des exos retirés sauvegardés dans `supabase/backups/`.
+>
+> **Volume bras hebdo inchangé** : biceps 8 directs, triceps 7 directs + 3 indirect (pompes).
+
+Fichier complet : `supabase/migrations/047_hold_weight_core_prehab_trim.sql` (appliqué via `node scripts/run_migration.mjs`).

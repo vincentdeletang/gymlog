@@ -30,11 +30,17 @@ export function nextTarget(previousLog, exercise) {
 
   if (mode === MODE_REPS) {
     if (previousLog.reps_done == null) return null
+    const hold = exercise?.hold_weight_kg
+    // Charge figée en dessous du dernier log : les reps de l'ancienne charge ne disent
+    // rien sur la nouvelle, on repart sur la plage reps_target.
+    if (hold != null && Number(hold) !== Number(previousLog.weight_kg)) {
+      return { mode: MODE_REPS, weight: Number(hold), reps: null, increased: false, atCeiling: false, reset: true }
+    }
     const atCeiling = previousLog.reps_done >= REPS_CEILING
     const increased = goodRIR && !atCeiling
     return {
       mode: MODE_REPS,
-      weight: previousLog.weight_kg ?? null,
+      weight: hold != null ? Number(hold) : (previousLog.weight_kg ?? null),
       reps: increased ? previousLog.reps_done + 1 : previousLog.reps_done,
       increased,
       atCeiling,

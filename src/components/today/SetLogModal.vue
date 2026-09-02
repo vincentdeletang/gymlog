@@ -86,6 +86,13 @@ const progression = computed(() => {
   const load = prev.weight_kg != null ? `${prev.weight_kg}kg × ` : ''
 
   if (next.mode === MODE_REPS) {
+    if (next.reset) {
+      return {
+        icon: '🔒',
+        text: `Charge figée à ${next.weight}kg — repars sur ${props.exercise.reps_target} reps`,
+        color: '#3b82f6',
+      }
+    }
     if (next.atCeiling) {
       return {
         icon: '🏁',

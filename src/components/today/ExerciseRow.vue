@@ -53,6 +53,7 @@ const suggestionLabel = computed(() => {
   const s = suggestion.value
   if (!s) return null
   if (s.mode !== MODE_REPS) return `${s.increased ? '↑' : '='} ${s.weight}kg`
+  if (s.reps == null) return `🔒 ${s.weight}kg`
   const load = s.weight != null ? `${s.weight}kg · ` : ''
   return `🔒 ${load}${s.increased ? '↑' : '='} ${s.reps} reps`
 })
