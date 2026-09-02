@@ -136,6 +136,18 @@ Une nouvelle vue `ProgramEditView` (route `/program/edit`).
 
 ---
 
+## Rappels programme (décisions prises, à exécuter à date)
+
+### ⏳ 23/09/2026 — Mercredi : charge figée 20 → 30 kg de disques
+
+Contexte (migrations 047-048) : réveils « cassé de partout », SLDL monté de +2 kg/semaine pendant 8 semaines. Les 3 exos barre du mercredi (front squat, SLDL, mollets) sont figés à **20 kg de disques** (30 kg réels) comme **test de 3 mercredis** : 02/09, 09/09, 16/09.
+
+Décision déjà prise : 30 kg réels est trop peu pour la densité osseuse et l'entretien jambes. Après le test, **si les réveils vont mieux → `hold_weight_kg` = 30** (40 kg réels, 10 + 5 par côté) sur les 3 exos, et on fige là. Si les réveils reviennent à 30 → retour à 20, le chiffre est trouvé.
+
+À faire ce jour-là : migration `UPDATE exercises SET hold_weight_kg = 30` sur le mercredi + retirer le préfixe « ⏳ CHECKPOINT » des notes.
+
+---
+
 ## Notes
 
 - Toutes ces évolutions sont indépendantes : peuvent être attaquées dans n'importe quel ordre.

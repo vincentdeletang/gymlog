@@ -2045,3 +2045,13 @@ END $$;
 > **Volume bras hebdo inchangé** : biceps 8 directs, triceps 7 directs + 3 indirect (pompes).
 
 Fichier complet : `supabase/migrations/047_hold_weight_core_prehab_trim.sql` (appliqué via `node scripts/run_migration.mjs`).
+
+## 50. Migration 048 — Rotation interne épaule gauche uniquement + checkpoint 30 kg
+
+> **Rotation interne (lundi + vendredi)** : épaule **gauche seulement**. L'exo vise une hypothèse précise (subscapulaire / chef long du biceps de l'épaule G). La droite n'a jamais rien eu et les face pulls, bilatéraux, couvrent sa santé générale. Faire le côté sain doublait le temps pour rien (80/20 de la 047).
+>
+> **Checkpoint 30 kg (mercredi)** : la 047 fige les 3 exos barre à 20 kg de disques comme **test de 3 mercredis** (02/09, 09/09, 16/09). 30 kg réels est trop peu pour la densité osseuse et l'entretien jambes → décision déjà prise : si les réveils vont mieux, passer `hold_weight_kg` à 30 (40 kg réels) et figer là. Rappel préfixé dans les notes des 3 exos (visible en séance) + entrée dans `EVOLUTIONS.md`.
+>
+> Aucun `set_log` touché — seul `notes` change.
+
+Fichier complet : `supabase/migrations/048_rotation_interne_gauche_checkpoint_30kg.sql`.
