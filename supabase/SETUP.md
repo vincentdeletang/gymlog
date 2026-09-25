@@ -2065,3 +2065,13 @@ Fichier complet : `supabase/migrations/048_rotation_interne_gauche_checkpoint_30
 > **Volume bras hebdo inchangé** : biceps 8 directs, triceps 7 directs + 3 indirect (pompes).
 
 Fichier complet : `supabase/migrations/049_drop_suspension_barre_fixe.sql`.
+
+## 52. Migration 050 — Sortie de la prehab épaule + barre au front le lundi
+
+> **Prehab épaule, fin du protocole** (épaule G sans douleur) : DROP rotation interne (lundi + vendredi, prehab ciblée sur le développé incliné haltère qui n'est plus au programme) et DROP face pulls **lundi** (curls uniquement, rien à protéger). GARDÉ face pulls 2×15 **vendredi** : seule séance de poussée, 90 s d'assurance pendant que le tendon finit de s'adapter. Élastique hebdo 8 sets → 2. Set_logs sauvegardés dans `supabase/backups/`.
+>
+> **Barre au front vendredi → lundi** (UPDATE, historique conservé) : le vendredi à 16 sets était vécu comme trop long, le lundi n'en avait que 12. Résultat 15 / 11 / 11. Triceps en 2 séances/semaine (lun 3 + ven 4) au lieu de 7 sets d'affilée, et **en alterné avec le curl hammer** (haltère vs barre EZ à 24 kg, rien à recharger, antagonistes) → les 7 sets prennent le temps de ~4. Notes des deux exos mises à jour.
+>
+> **Volume bras hebdo inchangé** : biceps 8 directs (lundi), triceps 7 directs (lun 3 + ven 4) + 3 indirect (pompes).
+
+Fichier complet : `supabase/migrations/050_prehab_exit_barre_au_front_lundi.sql`.
