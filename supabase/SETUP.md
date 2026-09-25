@@ -2055,3 +2055,13 @@ Fichier complet : `supabase/migrations/047_hold_weight_core_prehab_trim.sql` (ap
 > Aucun `set_log` touché — seul `notes` change.
 
 Fichier complet : `supabase/migrations/048_rotation_interne_gauche_checkpoint_30kg.sql`.
+
+## 51. Migration 049 — Retrait de la suspension barre fixe
+
+> **Cooldown lundi / mercredi / vendredi — DROP Suspension barre fixe** : douleur à l'avant-bras « à force ». L'exo fait porter 136 kg sur les doigts 3×/semaine, de loin la plus grosse charge de grip du programme (en plus des curls du lundi) ; la note « pieds au sol pour décharger » n'a pas suffi. Les logs confirment l'abandon en pratique : dernier log le 26/08, alors que genoux-poitrine est logué à chaque séance depuis.
+>
+> **Pas de remplacement** : le genoux-poitrine reste et couvre le relâchement lombaire du cooldown sans charge sur les mains. Set_logs sauvegardés dans `supabase/backups/suspension_barre_fixe_set_logs.json`.
+>
+> **Volume bras hebdo inchangé** : biceps 8 directs, triceps 7 directs + 3 indirect (pompes).
+
+Fichier complet : `supabase/migrations/049_drop_suspension_barre_fixe.sql`.
