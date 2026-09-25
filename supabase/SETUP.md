@@ -2075,3 +2075,15 @@ Fichier complet : `supabase/migrations/049_drop_suspension_barre_fixe.sql`.
 > **Volume bras hebdo inchangé** : biceps 8 directs (lundi), triceps 7 directs (lun 3 + ven 4) + 3 indirect (pompes).
 
 Fichier complet : `supabase/migrations/050_prehab_exit_barre_au_front_lundi.sql`.
+
+## 53. Migration 051 — Hammer retiré, curl haltère assis le vendredi
+
+> **DROP Curl haltères hammer (lundi)** : prise neutre = brachial + brachioradial, zone déjà développée chez le user, et exo le plus chargé en grip du programme (avant-bras, cf. 049). Set_logs sauvegardés dans `supabase/backups/`. La barre au front perd sa consigne d'alterné (séance à 11 sets, inutile).
+>
+> **ADD Curl haltère assis (supination) 3×10-12 (vendredi)**, entre overhead et plank, **en alterné avec l'overhead EZ** : même banc vertical cran 6, haltère d'un côté, barre EZ de l'autre, rien à recharger. Dos calé, coude au corps → épaule neutre, tendon du chef long non étiré (le curl incliné bras en arrière est écarté pour ça, arbitrage assumé). Mode `weight`, départ 10 kg de disques (2 × 5, petits disques) : le hammer à 20 kg (2 × 10 sur l'haltère) était trop lourd et impraticable, ce qui décourageait aussi.
+>
+> **Résultat** : un exo biceps + un exo triceps le lundi et le vendredi. Lundi 11 sets, vendredi 14 (~11 en temps).
+>
+> **Volume bras hebdo** : biceps 7 directs (4 + 3, était 8), triceps 7 directs + 3 indirect (pompes).
+
+Fichier complet : `supabase/migrations/051_drop_hammer_curl_halter_assis_vendredi.sql`.
