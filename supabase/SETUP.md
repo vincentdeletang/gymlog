@@ -2111,3 +2111,9 @@ Fichier complet : `supabase/migrations/053_curl_ez_plus_2kg_cycle.sql`.
 > Même soir que la 053. Le plafond de 20 reps du mode `reps` était une béquille posée quand le user refusait la charge ; séries de 20 = longues, brûlure, coude qui encaisse. Curl EZ (lundi + vendredi) passé en **mode `weight`, plage `10-15`**, `hold_weight_kg` remis à NULL : 15 reps avec RIR ≥ 2 → l'app propose +2 kg, retour à 10. Lundi, le dernier log (24 × 20) déclenche la proposition de 26 dès la prochaine séance ; vendredi (ligne neuve) il tape 26 la première fois. L'overhead EZ reste en mode `reps` jusqu'à son plafond.
 
 Fichier complet : `supabase/migrations/054_curl_ez_double_progression_10_15.sql`.
+
+## 57. Migration 055 — Overhead EZ lundi + vendredi, barre au front mercredi
+
+> Proposition du user : l'overhead EZ (meilleur exo triceps, longue portion étirée) tombait mercredi puis vendredi, 48 h entre deux fois le même mouvement puis 5 jours de vide. **Lundi + vendredi** = 72 h / 96 h, triceps frais aux deux séances ; **la barre au front passe au mercredi** (angle différent, une seule fois par semaine, coudes). Tout en UPDATE. Lundi : curl EZ ⇄ overhead sur la même barre (12 sets avec le gainage) ; mercredi : barre au front puis curl assis en séquence (6 sets, banc plat puis vertical) ; vendredi inchangé. Volume bras hebdo inchangé.
+
+Fichier complet : `supabase/migrations/055_overhead_lundi_vendredi_barre_au_front_mercredi.sql`.
