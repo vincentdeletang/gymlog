@@ -2099,3 +2099,15 @@ Fichier complet : `supabase/migrations/051_drop_hammer_curl_halter_assis_vendred
 > **Volume bras hebdo** : biceps 4 + 3 + 3 = 10 directs (était 7), triceps 3 + 4 + 3 = 10 directs (était 7) + 3 indirect (pompes). Coudes : barre au front une seule fois par semaine, bras touchés lun / mer / ven (48 h).
 
 Fichier complet : `supabase/migrations/052_cinq_matins_zone2_fondue.sql`.
+
+## 55. Migration 053 — Curl EZ +2 kg, le cycle reps repart
+
+> Le curl EZ du lundi plafonnait (24 kg de disques × 20 reps × 4, RIR 2, charge figée) : à 20 reps c'est de l'endurance. Décision du user (19/10/2026) : **+2 kg et on recommence le cycle**. `hold_weight_kg = 26` sur le curl EZ du lundi **et** du vendredi (même barre que l'overhead, rien à recharger) ; l'app pré-remplit 26, remet l'objectif sur 10-12 reps, puis +1 rep par séance jusqu'à 20, puis propose +2 kg. **Règle générale désormais pour les exos bras en mode `reps`** : plafond 20 reps à RIR ≥ 2 → +2 kg. L'overhead EZ reste à 24 jusqu'à son propre plafond.
+
+Fichier complet : `supabase/migrations/053_curl_ez_plus_2kg_cycle.sql`.
+
+## 56. Migration 054 — Curl EZ en double progression courte (10-15)
+
+> Même soir que la 053. Le plafond de 20 reps du mode `reps` était une béquille posée quand le user refusait la charge ; séries de 20 = longues, brûlure, coude qui encaisse. Curl EZ (lundi + vendredi) passé en **mode `weight`, plage `10-15`**, `hold_weight_kg` remis à NULL : 15 reps avec RIR ≥ 2 → l'app propose +2 kg, retour à 10. Lundi, le dernier log (24 × 20) déclenche la proposition de 26 dès la prochaine séance ; vendredi (ligne neuve) il tape 26 la première fois. L'overhead EZ reste en mode `reps` jusqu'à son plafond.
+
+Fichier complet : `supabase/migrations/054_curl_ez_double_progression_10_15.sql`.
