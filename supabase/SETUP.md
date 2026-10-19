@@ -2123,3 +2123,9 @@ Fichier complet : `supabase/migrations/055_overhead_lundi_vendredi_barre_au_fron
 > **Zone 2 lundi / mercredi / vendredi** en plus de mardi / jeudi (« je réfléchis pas, je le fais à chaque fois ») : 5 × 15 = 75 min/semaine, mercredi et vendredi (6 séries) tiennent dans le créneau, lundi déborde de ~5 min, accepté. **Overhead EZ en double progression courte 10-15** (mode `weight`, hold retiré) comme le curl : lundi l'app propose 26 → curl et overhead à la même charge sur la même barre, alterné sans toucher un disque. **Pompes serrées** (mardi) : mains largeur d'épaules, coudes le long du corps, triceps en cible principale ; à 15 × 3, les mains descendent d'un cran.
 
 Fichier complet : `supabase/migrations/056_zone2_tous_les_jours_overhead_10_15_pompes_serrees.sql`.
+
+## 59. Migration 057 — Retrait du genoux-poitrine
+
+> « Vraiment utile ? » Non : étirement passif, aucun renforcement, « je le fais pour cocher ». Mais il lui fait du bien dans le lit quand le dos tire, comme quand il était plus jeune : outil de soulagement, pas d'entraînement, sa place est hors de l'app. DROP des 5 lignes de cooldown, set_logs sauvegardés dans `supabase/backups/genoux_poitrine_set_logs.json`. La séance se termine désormais par la zone 2.
+
+Fichier complet : `supabase/migrations/057_drop_genoux_poitrine.sql`.
