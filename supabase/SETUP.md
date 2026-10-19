@@ -2117,3 +2117,9 @@ Fichier complet : `supabase/migrations/054_curl_ez_double_progression_10_15.sql`
 > Proposition du user : l'overhead EZ (meilleur exo triceps, longue portion étirée) tombait mercredi puis vendredi, 48 h entre deux fois le même mouvement puis 5 jours de vide. **Lundi + vendredi** = 72 h / 96 h, triceps frais aux deux séances ; **la barre au front passe au mercredi** (angle différent, une seule fois par semaine, coudes). Tout en UPDATE. Lundi : curl EZ ⇄ overhead sur la même barre (12 sets avec le gainage) ; mercredi : barre au front puis curl assis en séquence (6 sets, banc plat puis vertical) ; vendredi inchangé. Volume bras hebdo inchangé.
 
 Fichier complet : `supabase/migrations/055_overhead_lundi_vendredi_barre_au_front_mercredi.sql`.
+
+## 58. Migration 056 — Zone 2 tous les jours, overhead en 10-15, pompes serrées
+
+> **Zone 2 lundi / mercredi / vendredi** en plus de mardi / jeudi (« je réfléchis pas, je le fais à chaque fois ») : 5 × 15 = 75 min/semaine, mercredi et vendredi (6 séries) tiennent dans le créneau, lundi déborde de ~5 min, accepté. **Overhead EZ en double progression courte 10-15** (mode `weight`, hold retiré) comme le curl : lundi l'app propose 26 → curl et overhead à la même charge sur la même barre, alterné sans toucher un disque. **Pompes serrées** (mardi) : mains largeur d'épaules, coudes le long du corps, triceps en cible principale ; à 15 × 3, les mains descendent d'un cran.
+
+Fichier complet : `supabase/migrations/056_zone2_tous_les_jours_overhead_10_15_pompes_serrees.sql`.
