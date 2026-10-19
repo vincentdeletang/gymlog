@@ -1,0 +1,102 @@
+[
+ {
+  "id": "23cebf57-43b7-4dee-a2ef-f9bed3ad5417",
+  "session_id": "9eb45d92-07f6-42cf-969d-c5ff20152f77",
+  "cardio_block_id": "dc401071-af41-49c9-bc00-a8d66f62b99b",
+  "completed_at": "2026-04-21T12:34:21.921Z",
+  "duration_seconds": null,
+  "avg_hr": null,
+  "notes": null,
+  "name": "Sac de boxe"
+ },
+ {
+  "id": "5848ba0c-b788-4b1e-8010-59eeb87613d5",
+  "session_id": "5a7f0975-e2e6-4bbe-929a-d98cc12a318a",
+  "cardio_block_id": "eee2d251-77b9-4859-980e-b9e3a09baebf",
+  "completed_at": "2026-04-26T16:57:21.655Z",
+  "duration_seconds": null,
+  "avg_hr": null,
+  "notes": null,
+  "name": "Zone 2 (FC 120-140)"
+ },
+ {
+  "id": "72718e07-51f3-4398-b016-ff2243f7f022",
+  "session_id": "5a7f0975-e2e6-4bbe-929a-d98cc12a318a",
+  "cardio_block_id": "0cdfe59c-1f62-421a-b9bd-2eeddc205645",
+  "completed_at": "2026-04-26T16:57:22.260Z",
+  "duration_seconds": null,
+  "avg_hr": null,
+  "notes": null,
+  "name": "Zone 4 (FC 160-175)"
+ },
+ {
+  "id": "8cdaf71a-1cc6-4460-ade5-5d9a269ba818",
+  "session_id": "f86023fa-8186-42ca-b96c-1460ac48ae28",
+  "cardio_block_id": "eee2d251-77b9-4859-980e-b9e3a09baebf",
+  "completed_at": "2026-04-28T10:31:45.221Z",
+  "duration_seconds": 2400,
+  "avg_hr": null,
+  "notes": null,
+  "name": "Zone 2 (FC 120-140)"
+ },
+ {
+  "id": "d36db2e5-dd3f-48c3-8d93-7517f69d739a",
+  "session_id": "f86023fa-8186-42ca-b96c-1460ac48ae28",
+  "cardio_block_id": "0cdfe59c-1f62-421a-b9bd-2eeddc205645",
+  "completed_at": "2026-04-28T10:31:51.456Z",
+  "duration_seconds": 300,
+  "avg_hr": null,
+  "notes": null,
+  "name": "Zone 4 (FC 160-175)"
+ },
+ {
+  "id": "3b546d7c-052c-4075-807a-7985a230ef57",
+  "session_id": "2016c6db-5b9c-4f88-99a1-c8b14fa61248",
+  "cardio_block_id": "dc401071-af41-49c9-bc00-a8d66f62b99b",
+  "completed_at": "2026-04-30T11:12:31.360Z",
+  "duration_seconds": null,
+  "avg_hr": null,
+  "notes": null,
+  "name": "Sac de boxe"
+ },
+ {
+  "id": "24ca9874-8d74-45a2-bb45-c4b8bb83df9f",
+  "session_id": "fc7a66c2-f75b-4ea4-aba1-a0a448157010",
+  "cardio_block_id": "dc401071-af41-49c9-bc00-a8d66f62b99b",
+  "completed_at": "2026-06-04T11:29:24.090Z",
+  "duration_seconds": null,
+  "avg_hr": null,
+  "notes": null,
+  "name": "Sac de boxe"
+ },
+ {
+  "id": "082f305a-e318-4e98-81ff-27bc0b45523f",
+  "session_id": "5c9e5a11-1247-476f-8c6d-a8ba1dfcb3a2",
+  "cardio_block_id": "dc401071-af41-49c9-bc00-a8d66f62b99b",
+  "completed_at": "2026-06-18T17:17:05.909Z",
+  "duration_seconds": null,
+  "avg_hr": null,
+  "notes": null,
+  "name": "Sac de boxe"
+ },
+ {
+  "id": "959e9a88-f329-4ee5-885e-cce2aac8ff01",
+  "session_id": "2d0889e3-15a3-461e-95d7-0d47c3d1918d",
+  "cardio_block_id": "eee2d251-77b9-4859-980e-b9e3a09baebf",
+  "completed_at": "2026-06-30T19:49:52.526Z",
+  "duration_seconds": null,
+  "avg_hr": null,
+  "notes": null,
+  "name": "Zone 2 (FC 120-140)"
+ },
+ {
+  "id": "82b93c34-00e1-4872-943a-609b48e4283a",
+  "session_id": "2d0889e3-15a3-461e-95d7-0d47c3d1918d",
+  "cardio_block_id": "0cdfe59c-1f62-421a-b9bd-2eeddc205645",
+  "completed_at": "2026-06-30T19:49:53.093Z",
+  "duration_seconds": null,
+  "avg_hr": null,
+  "notes": null,
+  "name": "Zone 4 (FC 160-175)"
+ }
+]

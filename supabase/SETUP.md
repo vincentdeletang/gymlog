@@ -2087,3 +2087,15 @@ Fichier complet : `supabase/migrations/050_prehab_exit_barre_au_front_lundi.sql`
 > **Volume bras hebdo** : biceps 7 directs (4 + 3, était 8), triceps 7 directs + 3 indirect (pompes).
 
 Fichier complet : `supabase/migrations/051_drop_hammer_curl_halter_assis_vendredi.sql`.
+
+## 54. Migration 052 — Muscu 5 matins, zone 2 fondue, jambes en entretien
+
+> **Décidé dans FDR le 19/10/2026** (`../fdr/projects/sante/setup-sport.md` devient le propriétaire du setup). Le sport passe à 8h tous les matins, même rituel chaque jour. Les deux jours cardio seuls (mardi vélo, jeudi boxe) n'étaient plus logués depuis juin : supprimés, et la zone 2 est **fondue en fin de séance** mardi et jeudi (15 min, FC 115-135, 2 blocs `cardio_blocks` neufs ; 10 logs des anciens blocs sauvegardés dans `supabase/backups/cardio_velo_boxe_block_logs.json`).
+>
+> **Grille** : LUN Bras A · biceps (inchangé, 11 sets) · MAR Haut entretien + zone 2 (face pulls, pompes banc, plank ← vendredi, 7 sets) · MER Bras B · triceps (overhead EZ ⇄ curl haltère assis ← vendredi, 7 sets) · JEU Jambes court + zone 2 (dead bug, front squat **sur banc**, SLDL, mollets ← mercredi, 11 sets) · VEN Bras C (curl EZ 3 ⇄ overhead EZ 3, **nouvelles lignes** mode `reps` avec `hold_weight_kg = 24`, 6 sets). Genoux-poitrine en cooldown chaque jour (2 lignes insérées, mardi et jeudi).
+>
+> **Front squat → box squat** : le banc plat derrière lui fixe la profondeur, bail-out = s'asseoir. Charge toujours figée à 20 kg de disques ; le ⏳ CHECKPOINT du 23/09 est retiré des notes, la règle de passage à 30 kg tient en une phrase.
+>
+> **Volume bras hebdo** : biceps 4 + 3 + 3 = 10 directs (était 7), triceps 3 + 4 + 3 = 10 directs (était 7) + 3 indirect (pompes). Coudes : barre au front une seule fois par semaine, bras touchés lun / mer / ven (48 h).
+
+Fichier complet : `supabase/migrations/052_cinq_matins_zone2_fondue.sql`.
