@@ -2129,3 +2129,15 @@ Fichier complet : `supabase/migrations/056_zone2_tous_les_jours_overhead_10_15_p
 > « Vraiment utile ? » Non : étirement passif, aucun renforcement, « je le fais pour cocher ». Mais il lui fait du bien dans le lit quand le dos tire, comme quand il était plus jeune : outil de soulagement, pas d'entraînement, sa place est hors de l'app. DROP des 5 lignes de cooldown, set_logs sauvegardés dans `supabase/backups/genoux_poitrine_set_logs.json`. La séance se termine désormais par la zone 2.
 
 Fichier complet : `supabase/migrations/057_drop_genoux_poitrine.sql`.
+
+## 60. Migration 058 — Side plank lundi → mercredi
+
+> Équilibrage : lundi (bird dog + side plank + 8 séries bras + zone 2, ~50 min) était le jour le plus long, mercredi (6 séries + zone 2) le plus court. Le side plank passe au mercredi en ouverture. Chaque jour de bras ouvre par un exo de gainage anti-mouvement : lun bird dog, mar plank, mer side plank, jeu dead bug. UPDATE, historique conservé.
+
+Fichier complet : `supabase/migrations/058_side_plank_mercredi.sql`.
+
+## 61. Migration 059 — Rowing landmine (barre calée), test du mercredi
+
+> 6e variante de tirage, la seule qui contourne les trois obstacles des cinq précédentes : la barre passe entre les jambes (pas le ventre), pas de banc (pas l'entrejambe), rien d'accroché au rack. Un bout de la barre droite calé dans un coin, l'autre chargé et posé sur une barre de sécurité entre les séries (pas de ramassage au sol). 3 × 10-12, départ 10 kg de disques, `bar_id` NULL (on ne soulève qu'une partie de la barre). **Test** : ventre, dos ou avant-bras qui disent non à la 1ère série → DROP, dossier tirage clos. Inséré en position 1 du mercredi, barre au front et curl assis décalés.
+
+Fichier complet : `supabase/migrations/059_rowing_landmine_test_mercredi.sql`.
