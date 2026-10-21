@@ -2,6 +2,14 @@
 
 Tout coller dans **SQL Editor** de ton projet Supabase, dans l'ordre indiqué.
 
+> **Toute table créée dans `public` à partir du 30/10/2026 (mail Supabase du 20/10) doit recevoir ses droits dans la même migration**, sinon l'app reçoit `permission denied`. Les tables existantes gardent leurs droits ; une migration qui recrée le schéma (nouveau projet, `supabase db reset`) est concernée pour toutes ses tables, y compris celles de la 001. L'app parle avec la clé publique (`anon`) et un user connecté (`authenticated`), les scripts avec `service_role`. Modèle, à coller après le `create table` et avant le `enable row level security` :
+>
+> ```sql
+> grant select, insert, update, delete on public.ma_table to authenticated;
+> grant select, insert, update, delete on public.ma_table to service_role;
+> grant select on public.ma_table to anon;  -- seulement si la table se lit sans être connecté
+> ```
+
 ---
 
 ## 1. Migration initiale (schéma complet)
