@@ -1,6 +1,6 @@
 <script setup>
 import { ref, computed, watch, onUnmounted } from 'vue'
-import { nextTarget, progressionMode, parseRepsTarget, MODE_WEIGHT, MODE_REPS, REPS_CEILING } from '@/lib/progression'
+import { nextTarget, expectedReps, progressionMode, parseRepsTarget, MODE_WEIGHT, MODE_REPS, REPS_CEILING } from '@/lib/progression'
 import { useProgramStore } from '@/stores/useProgramStore'
 import { decomposeWeight, formatDecomposition } from '@/lib/plateCalc'
 import ExerciseNotes from '@/components/shared/ExerciseNotes.vue'
@@ -38,15 +38,14 @@ watch([() => props.existingLog, () => props.sessionPrevSet, () => props.previous
     weightKg.value = prev.weight_kg ?? ''
     repsDone.value = prev.reps_done ?? ''
     rir.value = prev.rir ?? 2
-  } else if (last?.weight_kg) {
-    // First set of session → charge pré-remplie selon la progression.
-    // Les reps ne sont JAMAIS pré-remplies, même en mode reps : la charge se vérifie
-    // sur la barre, les reps se comptent. Pré-remplir un objectif de reps le
-    // transformerait en donnée tapée par réflexe, et c'est cette donnée qui pilote
-    // toute la progression. L'objectif est affiché dans le badge à la place.
+  } else if (last) {
+    // Série 1 d'une nouvelle séance : charge ET reps pré-remplies avec ce que l'app
+    // attend (cf. expectedReps). Les −/+ servent à corriger sans ouvrir le clavier.
     const next = nextTarget(last, props.exercise)
-    weightKg.value = String(next?.weight ?? last.weight_kg)
-    repsDone.value = ''
+    const w = next?.weight ?? last.weight_kg
+    weightKg.value = props.exercise?.is_bodyweight || w == null ? '' : String(w)
+    const r = expectedReps(last, props.exercise)
+    repsDone.value = r == null ? '' : String(r)
     rir.value = 2
   } else {
     weightKg.value = ''
@@ -155,6 +154,12 @@ async function switchMode() {
   await programStore.updateProgressionMode(props.exercise.id, target)
 }
 
+function bump(field, delta) {
+  const current = parseFloat(field.value)
+  const base = Number.isFinite(current) ? current : 0
+  field.value = String(Math.max(0, Math.round((base + delta) * 2) / 2))
+}
+
 function save() {
   emit('save', {
     weightKg: props.exercise?.is_bodyweight ? null : (parseFloat(weightKg.value) || null),
@@ -219,15 +224,19 @@ onUnmounted(() => {
               Disques (kg)
               <span v-if="exercise?.bars" class="target">+ {{ exercise.bars.weight_kg }}kg {{ exercise.bars.name }}</span>
             </label>
-            <input
-              v-model="weightKg"
-              type="number"
-              inputmode="decimal"
-              step="0.5"
-              min="0"
-              placeholder="Ex: 20"
-              class="field-input"
-            />
+            <div class="field-row">
+              <button type="button" class="step-btn" aria-label="−1 kg" @click="bump(weightKg, -1)">−</button>
+              <input
+                v-model="weightKg"
+                type="number"
+                inputmode="decimal"
+                step="0.5"
+                min="0"
+                placeholder="Ex: 20"
+                class="field-input"
+              />
+              <button type="button" class="step-btn" aria-label="+1 kg" @click="bump(weightKg, 1)">+</button>
+            </div>
             <div v-if="plateBreakdown" class="plates-hint">
               <span class="plates-icon">⚖️</span> {{ plateBreakdown }}
             </div>
@@ -243,14 +252,18 @@ onUnmounted(() => {
               </span>
             </label>
             <div v-if="targetCue" class="cue">{{ targetCue }}</div>
-            <input
-              v-model="repsDone"
-              type="number"
-              inputmode="numeric"
-              min="0"
-              placeholder="Ex: 10"
-              class="field-input"
-            />
+            <div class="field-row">
+              <button type="button" class="step-btn" aria-label="−1 rep" @click="bump(repsDone, -1)">−</button>
+              <input
+                v-model="repsDone"
+                type="number"
+                inputmode="numeric"
+                min="0"
+                placeholder="Ex: 10"
+                class="field-input"
+              />
+              <button type="button" class="step-btn" aria-label="+1 rep" @click="bump(repsDone, 1)">+</button>
+            </div>
           </div>
 
           <!-- RIR selector -->
@@ -428,18 +441,51 @@ onUnmounted(() => {
   margin-top: -2px;
 }
 
+.field-row {
+  display: flex;
+  gap: 8px;
+}
+
 .field-input {
   background: #1f2937;
   border: 2px solid #374151;
   border-radius: 10px;
   color: #f9fafb;
-  font-size: 22px;
+  font-size: 24px;
   font-family: 'Barlow Condensed', sans-serif;
   font-weight: 700;
   padding: 10px 14px;
-  width: 100%;
+  flex: 1;
+  min-width: 0;
+  text-align: center;
   outline: none;
   transition: border-color 0.15s;
+  -moz-appearance: textfield;
+}
+
+.field-input::-webkit-outer-spin-button,
+.field-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.step-btn {
+  width: 56px;
+  min-height: 56px;
+  flex-shrink: 0;
+  background: #1f2937;
+  border: 2px solid #374151;
+  border-radius: 10px;
+  color: #f9fafb;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.step-btn:active {
+  background: #374151;
 }
 
 .field-input:focus {

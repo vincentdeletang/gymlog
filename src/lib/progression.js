@@ -61,3 +61,20 @@ export function nextTarget(previousLog, exercise) {
     atCeiling: false,
   }
 }
+
+// Reps attendues pour la série 1 d'une nouvelle séance, pré-remplies dans la modal
+// (demande du 22/10/2026 : « généralement c'est ce que je fais »).
+//   mode 'reps'   : l'objectif de nextTarget, ou le bas de la plage après un reset
+//   mode 'weight' : bas de la plage si la charge vient de monter, +1 rep tant qu'on est
+//                   sous le haut de la plage avec un RIR correct, sinon ce qui a été fait
+export function expectedReps(previousLog, exercise) {
+  if (previousLog?.reps_done == null) return null
+  const next = nextTarget(previousLog, exercise)
+  const range = parseRepsTarget(exercise?.reps_target)
+  if (next?.mode === MODE_REPS) return next.reps ?? range?.min ?? null
+  if (!range) return previousLog.reps_done
+  if (next?.increased) return range.min
+  if (previousLog.reps_done >= range.max) return previousLog.reps_done
+  const goodRIR = previousLog.rir == null || previousLog.rir >= 2
+  return goodRIR ? Math.min(previousLog.reps_done + 1, range.max) : previousLog.reps_done
+}
