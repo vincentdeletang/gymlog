@@ -4,7 +4,7 @@ import SetButton from './SetButton.vue'
 import ExerciseNotes from '@/components/shared/ExerciseNotes.vue'
 import { useWorkoutStore } from '@/stores/useWorkoutStore'
 import { nextTarget, MODE_REPS } from '@/lib/progression'
-import { isTimed as isTimedTarget } from '@/lib/parseTarget'
+import { isTimed as isTimedTarget, splitTarget } from '@/lib/parseTarget'
 
 const props = defineProps({
   exercise: Object,
@@ -41,12 +41,17 @@ const suggestion = computed(() => {
 
 const repsMode = computed(() => suggestion.value?.mode === MODE_REPS)
 
+// `reps_target` porte la plage puis, après le premier « / », la consigne libre
+// (« jambe, jusqu'à 2 en réserve »). La plage reste à droite du nom, la consigne
+// passe sous le nom : avant, elle poussait le nom hors de l'écran.
+const targetParts = computed(() => splitTarget(props.exercise.reps_target))
+
 // En mode reps la plage `reps_target` ne pilote plus rien : l'objectif du jour vient
 // de la séance précédente. Afficher "4×10-12" alors qu'il vise 15 serait faux.
 const setsLabel = computed(() =>
   repsMode.value && suggestion.value.reps != null
     ? `${props.exercise.sets_target}×${suggestion.value.reps}`
-    : `${props.exercise.sets_target}×${props.exercise.reps_target}`
+    : `${props.exercise.sets_target}×${targetParts.value.range}`
 )
 
 const suggestionLabel = computed(() => {
@@ -75,7 +80,10 @@ const SECTION_BADGE = {
           class="section-dot"
           :style="{ background: SECTION_BADGE[exercise.section]?.color }"
         />
-        <span class="ex-name">{{ exercise.name }}</span>
+        <div class="ex-name-block">
+          <span class="ex-name">{{ exercise.name }}</span>
+          <span v-if="!collapsed && targetParts.cue" class="ex-cue">{{ targetParts.cue }}</span>
+        </div>
       </div>
       <div class="ex-meta">
         <span v-if="collapsed" class="done-check">✓</span>
@@ -132,9 +140,9 @@ const SECTION_BADGE = {
 
 .ex-header {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
-  gap: 8px;
+  gap: 10px;
 }
 
 .ex-header.clickable {
@@ -177,10 +185,23 @@ const SECTION_BADGE = {
 
 .ex-name-wrap {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 8px;
   flex: 1;
   min-width: 0;
+}
+
+.ex-name-block {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.ex-cue {
+  font-size: 13px;
+  color: #9ca3af;
+  line-height: 1.3;
 }
 
 .section-dot {
@@ -188,16 +209,23 @@ const SECTION_BADGE = {
   height: 8px;
   border-radius: 50%;
   flex-shrink: 0;
+  margin-top: 7px;
 }
 
 .ex-name {
   font-family: 'Barlow Condensed', sans-serif;
-  font-size: 16px;
+  font-size: 19px;
   font-weight: 700;
   color: #f9fafb;
-  white-space: nowrap;
+  line-height: 1.15;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
   overflow: hidden;
-  text-overflow: ellipsis;
+}
+
+.collapsed .ex-name {
+  -webkit-line-clamp: 1;
 }
 
 .ex-meta {
@@ -205,11 +233,13 @@ const SECTION_BADGE = {
   align-items: center;
   gap: 6px;
   flex-shrink: 0;
+  margin-top: 2px;
 }
 
 .ex-sets {
   font-family: 'Barlow Condensed', sans-serif;
-  font-size: 14px;
+  font-size: 16px;
+  font-weight: 600;
   color: #9ca3af;
 }
 

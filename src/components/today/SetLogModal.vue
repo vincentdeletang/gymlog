@@ -4,6 +4,7 @@ import { nextTarget, progressionMode, parseRepsTarget, MODE_WEIGHT, MODE_REPS, R
 import { useProgramStore } from '@/stores/useProgramStore'
 import { decomposeWeight, formatDecomposition } from '@/lib/plateCalc'
 import ExerciseNotes from '@/components/shared/ExerciseNotes.vue'
+import { splitTarget } from '@/lib/parseTarget'
 
 const props = defineProps({
   exercise: Object,
@@ -71,6 +72,9 @@ const plateBreakdown = computed(() => {
   const formatted = formatDecomposition(decomp)
   return hasBar ? `${formatted} kg par côté` : `${formatted} kg`
 })
+
+const targetRange = computed(() => splitTarget(props.exercise?.reps_target).range)
+const targetCue = computed(() => splitTarget(props.exercise?.reps_target).cue)
 
 const mode = computed(() => progressionMode(props.exercise))
 const canSwitchMode = computed(() =>
@@ -234,10 +238,11 @@ onUnmounted(() => {
           <div class="field">
             <label>
               Reps réalisés
-              <span class="target" v-if="exercise?.reps_target">
-                (cible : {{ exercise.reps_target }})
+              <span class="target" v-if="targetRange">
+                (cible : {{ targetRange }})
               </span>
             </label>
+            <div v-if="targetCue" class="cue">{{ targetCue }}</div>
             <input
               v-model="repsDone"
               type="number"
@@ -414,7 +419,13 @@ onUnmounted(() => {
 }
 
 .target {
-  color: #6b7280;
+  color: #9ca3af;
+}
+
+.cue {
+  font-size: 13px;
+  color: #9ca3af;
+  margin-top: -2px;
 }
 
 .field-input {
