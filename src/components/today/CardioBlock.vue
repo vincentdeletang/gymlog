@@ -26,9 +26,11 @@ const loggedMin = computed(() =>
 
 const delta = computed(() => durationDelta(log.value?.duration_seconds, targetMin.value))
 
+// Un tap logue la durée cible : c'est le cas de 9 séances sur 10. L'autre durée
+// passe par la modal.
 function toggleDone() {
   if (done.value) workoutStore.unmarkCardioDone(props.block.id)
-  else workoutStore.markCardioDone(props.block.id)
+  else workoutStore.markCardioDone(props.block.id, { duration_seconds: targetMin.value * 60 })
 }
 
 function onDetailSave(details) {
@@ -40,34 +42,33 @@ function onDetailSave(details) {
 <template>
   <div class="cardio-block" :class="{ done }">
     <div class="block-header">
-      <div class="block-info">
-        <span class="block-index">{{ index + 1 }}</span>
-        <div class="block-text">
-          <div class="block-name">{{ block.name }}</div>
-          <div class="block-target">
-            <span class="target-min">{{ targetMin }} min</span>
-            <span v-if="suggestion?.increased" class="cardio-suggestion increased">
-              ↑ +{{ block.progression_step_minutes ?? 2 }} min
-            </span>
-            <span v-else-if="suggestion?.atMax && !suggestion?.increased" class="cardio-suggestion atmax">
-              🎯 max
-            </span>
-            <span v-if="loggedMin != null" class="block-actual" :class="{ over: delta > 0, under: delta < 0 }">
-              · {{ loggedMin }} min
-              <span v-if="delta > 0">(+{{ delta }})</span>
-              <span v-else-if="delta < 0">({{ delta }})</span>
-            </span>
-          </div>
+      <span class="block-index">{{ index + 1 }}</span>
+      <div class="block-text">
+        <div class="block-name">{{ block.name }}</div>
+        <div class="block-target">
+          <span class="target-min">{{ targetMin }} min</span>
+          <span v-if="suggestion?.increased" class="cardio-suggestion increased">
+            ↑ +{{ block.progression_step_minutes ?? 2 }} min
+          </span>
+          <span v-else-if="suggestion?.atMax && !suggestion?.increased" class="cardio-suggestion atmax">
+            🎯 max
+          </span>
+          <span v-if="done && loggedMin != null && delta" class="block-actual" :class="{ over: delta > 0, under: delta < 0 }">
+            · fait {{ loggedMin }} min
+          </span>
         </div>
       </div>
-      <button class="done-btn" :class="{ active: done }" @click="toggleDone">
-        {{ done ? '✓ Fait' : 'Fait' }}
-      </button>
     </div>
 
-    <button class="detail-link" @click="detailOpen = true">
-      {{ loggedMin != null ? '✏️ Modifier durée' : '＋ Logger durée' }}
-    </button>
+    <div class="block-actions">
+      <button class="done-btn" :class="{ active: done }" @click="toggleDone">
+        <template v-if="done">✓ {{ loggedMin ?? targetMin }} min</template>
+        <template v-else>Fait · {{ targetMin }} min</template>
+      </button>
+      <button class="edit-btn" @click="detailOpen = true">
+        {{ done ? 'Modifier' : 'Autre durée' }}
+      </button>
+    </div>
 
     <div v-if="block.notes" class="block-notes">💡 {{ block.notes }}</div>
 
@@ -90,7 +91,7 @@ function onDetailSave(details) {
   padding: 14px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
   transition: border-color 0.2s;
 }
 
@@ -99,13 +100,6 @@ function onDetailSave(details) {
 }
 
 .block-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-}
-
-.block-info {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -131,18 +125,20 @@ function onDetailSave(details) {
 
 .block-name {
   font-family: 'Barlow Condensed', sans-serif;
-  font-size: 16px;
+  font-size: 19px;
   font-weight: 700;
   color: #f9fafb;
+  line-height: 1.15;
 }
 
 .block-target {
-  font-size: 12px;
+  font-size: 13px;
   color: #9ca3af;
   display: flex;
   align-items: center;
   gap: 6px;
   flex-wrap: wrap;
+  margin-top: 2px;
 }
 
 .target-min {
@@ -151,7 +147,7 @@ function onDetailSave(details) {
 
 .cardio-suggestion {
   font-family: 'Barlow Condensed', sans-serif;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 800;
   letter-spacing: 0.5px;
   padding: 1px 6px;
@@ -177,47 +173,54 @@ function onDetailSave(details) {
   color: #f59e0b;
 }
 
+.block-actions {
+  display: flex;
+  gap: 8px;
+}
+
 .done-btn {
-  flex-shrink: 0;
-  min-height: 36px;
+  flex: 1;
+  min-height: 52px;
   padding: 0 14px;
   background: #1f2937;
-  color: #9ca3af;
+  color: #e5e7eb;
   font-family: 'Barlow Condensed', sans-serif;
-  font-size: 13px;
+  font-size: 18px;
   font-weight: 700;
   letter-spacing: 1px;
-  border: 1px solid #1f2937;
-  border-radius: 10px;
+  border: 2px solid #374151;
+  border-radius: 12px;
   cursor: pointer;
   transition: all 0.15s;
 }
 
 .done-btn.active {
   background: rgba(16, 185, 129, 0.15);
-  border-color: rgba(16, 185, 129, 0.4);
+  border-color: #10b981;
   color: #10b981;
 }
 
-.done-btn:active { transform: scale(0.96); }
+.done-btn:active { transform: scale(0.97); }
 
-.detail-link {
+.edit-btn {
+  min-height: 52px;
+  padding: 0 14px;
   background: transparent;
-  border: 1px dashed #374151;
+  border: 1px solid #374151;
   color: #9ca3af;
-  font-size: 12px;
-  font-weight: 500;
-  padding: 6px 10px;
-  border-radius: 8px;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 15px;
+  font-weight: 600;
+  border-radius: 12px;
   cursor: pointer;
-  align-self: flex-start;
   transition: all 0.15s;
 }
 
-.detail-link:active { background: #1f2937; color: #f9fafb; }
+.edit-btn:active { background: #1f2937; color: #f9fafb; }
 
 .block-notes {
-  font-size: 12px;
+  font-size: 13px;
   color: #9ca3af;
+  line-height: 1.45;
 }
 </style>
