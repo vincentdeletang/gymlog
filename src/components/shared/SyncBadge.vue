@@ -1,29 +1,37 @@
 <script setup>
 import { computed } from 'vue'
+import { useOnline } from '@vueuse/core'
 import { pendingCount, syncState } from '@/lib/offlineQueue'
 
-// 'synced'  → tout est passé chez Supabase
+const online = useOnline()
+
+// 'synced'  → tout est passé chez Supabase : rien à afficher
 // 'syncing' → envoi en cours
-// 'pending' → des logs attendent (offline, ou erreur de sync)
+// 'pending' → des logs attendent (erreur de sync)
+// 'offline' → pas de réseau, les logs partiront au retour
 const state = computed(() => {
+  if (!online.value) return 'offline'
   if (syncState.value === 'syncing') return 'syncing'
   if (pendingCount.value > 0) return 'pending'
   return 'synced'
 })
 
 const label = computed(() => {
+  if (state.value === 'offline') return pendingCount.value > 0 ? `Hors ligne · ${pendingCount.value} en attente` : 'Hors ligne'
   if (state.value === 'syncing') return 'Sync…'
   if (state.value === 'pending') return `${pendingCount.value} en attente`
-  return 'Sync'
+  return ''
 })
 </script>
 
 <template>
-  <div class="sync-badge" :class="state" role="status" aria-live="polite">
-    <span v-if="state === 'syncing'" class="spinner" aria-hidden="true"></span>
-    <span v-else class="icon" aria-hidden="true">{{ state === 'synced' ? '✓' : '⚠' }}</span>
-    <span class="txt">{{ label }}</span>
-  </div>
+  <transition name="fade">
+    <div v-if="state !== 'synced'" class="sync-badge" :class="state" role="status" aria-live="polite">
+      <span v-if="state === 'syncing'" class="spinner" aria-hidden="true"></span>
+      <span v-else class="icon" aria-hidden="true">{{ state === 'offline' ? '⇅' : '⚠' }}</span>
+      <span class="txt">{{ label }}</span>
+    </div>
+  </transition>
 </template>
 
 <style scoped>
@@ -36,39 +44,33 @@ const label = computed(() => {
   display: flex;
   align-items: center;
   gap: 5px;
-  padding: 4px 9px;
+  padding: 5px 10px;
   border-radius: 999px;
   font-family: 'Barlow Condensed', sans-serif;
-  font-size: 12px;
-  font-weight: 600;
+  font-size: 13px;
+  font-weight: 700;
   letter-spacing: 0.5px;
   text-transform: uppercase;
   line-height: 1;
   pointer-events: none;
-  transition: opacity 0.2s, background 0.2s, color 0.2s;
 }
 
-/* Synced: discret, vert, semi-transparent — juste une confirmation passive */
-.sync-badge.synced {
-  background: rgba(16, 185, 129, 0.12);
-  color: #34d399;
-  opacity: 0.6;
-}
-
-/* En cours d'envoi: bleu */
 .sync-badge.syncing {
   background: rgba(59, 130, 246, 0.18);
   color: #60a5fa;
 }
 
-/* En attente / erreur: ambre, bien visible */
 .sync-badge.pending {
   background: rgba(245, 158, 11, 0.2);
   color: #fbbf24;
-  opacity: 1;
 }
 
-.icon { font-size: 12px; }
+.sync-badge.offline {
+  background: #374151;
+  color: #f9fafb;
+}
+
+.icon { font-size: 13px; }
 
 .spinner {
   width: 11px;
