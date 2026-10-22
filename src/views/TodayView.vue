@@ -357,8 +357,9 @@ watch(mobilityDone, done => { if (done) open.value.mobility = false })
       ⚠️ {{ userStore.streak }} jours sans repos — pense à récupérer !
     </div>
 
-    <!-- Rest day -->
-    <div v-if="isRestDay" class="rest-day">
+    <!-- Rest day (masqué pendant le chargement : sans programme chargé, dayType vaut 'rest'
+         et « Jour de repos » flashait à chaque ouverture) -->
+    <div v-if="isRestDay && !loading" class="rest-day">
       <div class="rest-icon">{{ mobilityExercises.length ? '🌿' : '😴' }}</div>
       <h2>{{ mobilityExercises.length ? 'Récupération active' : 'Jour de repos' }}</h2>
       <p>Récupération = progression. Profites-en !</p>
