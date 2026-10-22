@@ -12,9 +12,25 @@ const props = defineProps({
 })
 const emit = defineEmits(['stop', 'cancel'])
 
-const {
-  playPrepTick, playGo, playTick10, playComplete, vibrate,
-} = useAudio()
+const { scheduleSequence, vibrate } = useAudio()
+
+const PREP_SEC = 3
+
+// Tous les sons d'une phase (3 tics de préparation, le « go », les 3 tics de fin, l'accord
+// final) sont posés d'un coup sur l'horloge audio au début de la préparation. Le JS ne fait
+// plus sonner : il n'affiche et ne vibre que. Avant, chaque bip dépendait d'un setInterval
+// que le téléphone ralentit (écran qui s'assombrit, onglet caché) : bips en retard, groupés,
+// ou « 3 s avant la fin » selon le rattrapage.
+function cueEvents(target) {
+  const ev = []
+  for (let i = 0; i < PREP_SEC; i++) ev.push({ at: i, kind: 'prep' })
+  ev.push({ at: PREP_SEC, kind: 'go' })
+  for (let i = 3; i >= 1; i--) {
+    if (target - i > 0) ev.push({ at: PREP_SEC + target - i, kind: 'tick' })
+  }
+  ev.push({ at: PREP_SEC + target, kind: 'complete' })
+  return ev
+}
 
 const phase = ref('prep') // 'prep' | 'run' | 'between' | 'post'
 const side = ref(1)
@@ -23,11 +39,13 @@ const elapsedMs = ref(0)
 const accumulatedMs = ref(0)
 
 let startRunTime = 0
+let prepStart = 0
 let rafId = null
 let prepTimer = null
 let tickTimer = null
 const fired = new Set()
 let wakeLock = null
+let cues = null
 
 const SECTION_COLOR = {
   rehab:    '#f59e0b',
@@ -99,17 +117,17 @@ function checkMilestones() {
   for (let i = 3; i >= 1; i--) {
     const t = target - i
     if (t > 0 && sec >= t) {
-      fireOnce(`count_${i}`, () => { playTick10(); vibrate([30]) })
+      fireOnce(`count_${i}`, () => vibrate([30]))
     }
   }
 
   if (sec >= target) {
     if (props.perSide && side.value === 1) {
-      fireOnce('target_side1', () => { playComplete(); vibrate([120, 60, 120]) })
+      fireOnce('target_side1', () => vibrate([120, 60, 120]))
       startBetween()
       return
     }
-    fireOnce('target', () => { playComplete(); vibrate([200, 80, 200]) })
+    fireOnce('target', () => vibrate([200, 80, 200]))
     if (props.isRange) {
       phase.value = 'post'
     } else {
@@ -126,30 +144,44 @@ function loop() {
 
 function startRun() {
   phase.value = 'run'
-  startRunTime = Date.now()
-  elapsedMs.value = 0
+  // Le « go » a sonné à prepStart + 3 s exactement : le chrono démarre là, pas à l'instant
+  // (ralenti) où le JS s'en aperçoit.
+  startRunTime = prepStart + PREP_SEC * 1000
+  elapsedMs.value = Date.now() - startRunTime
   fired.clear()
-  playGo()
   vibrate([80])
   requestWakeLock()
   loop()
   tickTimer = setInterval(checkMilestones, 200)
 }
 
-function startPrep() {
-  prepCount.value = 3
-  playPrepTick()
+// Compte à rebours de préparation : l'affichage se déduit de l'heure, les sons sont déjà
+// posés sur l'horloge audio (cueEvents), le JS ne fait que vibrer et lancer la phase run.
+function runPrep(onDone) {
+  prepStart = Date.now()
+  prepCount.value = PREP_SEC
+  if (cues) cues.cancel()
+  cues = scheduleSequence(cueEvents(props.targetSeconds))
   vibrate([50])
+  let lastShown = PREP_SEC
   prepTimer = setInterval(() => {
-    prepCount.value--
-    if (prepCount.value > 0) {
-      playPrepTick()
-      vibrate([50])
-    } else {
+    const left = PREP_SEC - Math.floor((Date.now() - prepStart) / 1000)
+    if (left <= 0) {
       clearInterval(prepTimer); prepTimer = null
-      startRun()
+      prepCount.value = 0
+      onDone()
+      return
     }
-  }, 1000)
+    if (left !== lastShown) {
+      lastShown = left
+      prepCount.value = left
+      vibrate([50])
+    }
+  }, 100)
+}
+
+function startPrep() {
+  runPrep(startRun)
 }
 
 function startBetween() {
@@ -159,20 +191,7 @@ function startBetween() {
   elapsedMs.value = 0
   fired.clear()
   phase.value = 'between'
-  prepCount.value = 3
-  playPrepTick()
-  vibrate([50])
-  prepTimer = setInterval(() => {
-    prepCount.value--
-    if (prepCount.value > 0) {
-      playPrepTick()
-      vibrate([50])
-    } else {
-      clearInterval(prepTimer); prepTimer = null
-      side.value = 2
-      startRun()
-    }
-  }, 1000)
+  runPrep(() => { side.value = 2; startRun() })
 }
 
 async function requestWakeLock() {
@@ -198,13 +217,16 @@ function teardown() {
   if (rafId) { cancelAnimationFrame(rafId); rafId = null }
   if (prepTimer) { clearInterval(prepTimer); prepTimer = null }
   if (tickTimer) { clearInterval(tickTimer); tickTimer = null }
+  if (cues) { cues.cancel(); cues = null }
   releaseWakeLock()
 }
 
 function doStop() {
   teardown()
   const totalMs = accumulatedMs.value + elapsedMs.value
-  const seconds = Math.max(1, Math.floor(totalMs / 1000))
+  // round, pas floor : si le JS a constaté la fin avec un peu de retard, on ne logue pas 31 s
+  // pour un plank de 30.
+  const seconds = Math.max(1, Math.round(totalMs / 1000))
   emit('stop', { seconds })
 }
 

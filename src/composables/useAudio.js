@@ -5,19 +5,70 @@ function ctx() {
   return sharedCtx
 }
 
-function tone({ freq, duration = 0.1, startGain = 0.25, endGain = 0.001, delay = 0 }) {
+// Un son posé à un instant précis de l'horloge audio (indépendante des timers JS,
+// qui sont ralentis dès que l'écran s'éteint ou que l'onglet passe en arrière-plan).
+function toneAt(c, t, { freq, duration = 0.1, startGain = 0.25, endGain = 0.001 }) {
   try {
-    const c = ctx()
     const osc = c.createOscillator()
     const gain = c.createGain()
     osc.connect(gain); gain.connect(c.destination)
-    const t = c.currentTime + delay
     osc.frequency.setValueAtTime(freq, t)
     gain.gain.setValueAtTime(startGain, t)
     gain.gain.exponentialRampToValueAtTime(endGain, t + duration)
     osc.start(t)
     osc.stop(t + duration)
+    return osc
+  } catch { return null }
+}
+
+function tone({ delay = 0, ...opts }) {
+  try {
+    const c = ctx()
+    toneAt(c, c.currentTime + delay, opts)
   } catch {}
+}
+
+function spawn(c, t, kind) {
+  switch (kind) {
+    case 'prep': return [toneAt(c, t, { freq: 600, duration: 0.08 })]
+    case 'tick': return [toneAt(c, t, { freq: 700, duration: 0.08, startGain: 0.22 })]
+    case 'go':   return [
+      toneAt(c, t, { freq: 880, duration: 0.12, startGain: 0.3 }),
+      toneAt(c, t + 0.12, { freq: 1320, duration: 0.16, startGain: 0.3 }),
+    ]
+    case 'complete': return [523, 659, 784, 1047].map((f, i) =>
+      toneAt(c, t + i * 0.15, { freq: f, duration: 0.2, startGain: 0.3 }))
+  }
+  return []
+}
+
+// Programme toute une séquence de sons d'un coup sur l'horloge audio :
+// events = [{ at: secondes depuis maintenant, kind: 'prep' | 'go' | 'tick' | 'complete' }].
+// Les sons partent à l'heure même si le JS est ralenti ; cancel() coupe ce qui n'a pas sonné.
+// Si le contexte est suspendu, on attend sa reprise avant de poser les sons, sinon tout
+// se jouerait d'un bloc à la reprise (le bug « ça sonne 3 s avant la fin, pas consistent »).
+export function scheduleSequence(events) {
+  const nodes = []
+  let cancelled = false
+  const place = (c) => {
+    if (cancelled) return
+    const base = c.currentTime
+    for (const e of events) {
+      for (const n of spawn(c, base + e.at, e.kind)) if (n) nodes.push(n)
+    }
+  }
+  try {
+    const c = ctx()
+    if (c.state === 'running') place(c)
+    else c.resume().then(() => place(c)).catch(() => {})
+  } catch {}
+  return {
+    cancel() {
+      cancelled = true
+      for (const n of nodes) { try { n.stop(0) } catch {} }
+      nodes.length = 0
+    },
+  }
 }
 
 function vibrate(pattern) {
@@ -70,6 +121,7 @@ export function useAudio() {
   return {
     playSuccess, playComplete,
     playPrepTick, playGo, playTick10,
+    scheduleSequence,
     vibrate,
   }
 }
