@@ -1,0 +1,110 @@
+[
+  {
+    "id": "b935b37d-4c05-41fa-a0e1-0d409cb5be83",
+    "session_id": "82254dfd-20cb-4487-92c9-a50e9cf8fcc4",
+    "exercise_id": "3334c9ec-63d9-4fed-ae83-ff6ae24e1ac1",
+    "set_number": 1,
+    "weight_kg": "10",
+    "reps_done": 12,
+    "rir": 3,
+    "logged_at": "2026-09-25T15:10:23.263Z",
+    "exercise_name": "Curl haltère assis (supination)",
+    "session_date": "2026-09-24T22:00:00.000Z"
+  },
+  {
+    "id": "7670b095-0166-4c00-bb2e-cbaa4ac1192d",
+    "session_id": "82254dfd-20cb-4487-92c9-a50e9cf8fcc4",
+    "exercise_id": "3334c9ec-63d9-4fed-ae83-ff6ae24e1ac1",
+    "set_number": 2,
+    "weight_kg": "10",
+    "reps_done": 12,
+    "rir": 3,
+    "logged_at": "2026-09-25T15:11:57.708Z",
+    "exercise_name": "Curl haltère assis (supination)",
+    "session_date": "2026-09-24T22:00:00.000Z"
+  },
+  {
+    "id": "0f01efcb-8080-45fe-a670-0d434fc7aedf",
+    "session_id": "82254dfd-20cb-4487-92c9-a50e9cf8fcc4",
+    "exercise_id": "3334c9ec-63d9-4fed-ae83-ff6ae24e1ac1",
+    "set_number": 3,
+    "weight_kg": "10",
+    "reps_done": 12,
+    "rir": 3,
+    "logged_at": "2026-09-25T15:15:01.087Z",
+    "exercise_name": "Curl haltère assis (supination)",
+    "session_date": "2026-09-24T22:00:00.000Z"
+  },
+  {
+    "id": "cc7cc811-1e1d-4cc9-8dee-4575168f7077",
+    "session_id": "45b41ccd-ed3f-4bdc-8184-dd6843534d3d",
+    "exercise_id": "3334c9ec-63d9-4fed-ae83-ff6ae24e1ac1",
+    "set_number": 1,
+    "weight_kg": "12",
+    "reps_done": 12,
+    "rir": 3,
+    "logged_at": "2026-10-02T11:11:23.052Z",
+    "exercise_name": "Curl haltère assis (supination)",
+    "session_date": "2026-10-01T22:00:00.000Z"
+  },
+  {
+    "id": "158fd55e-238a-424e-b4fa-32c194c99556",
+    "session_id": "45b41ccd-ed3f-4bdc-8184-dd6843534d3d",
+    "exercise_id": "3334c9ec-63d9-4fed-ae83-ff6ae24e1ac1",
+    "set_number": 2,
+    "weight_kg": "12",
+    "reps_done": 12,
+    "rir": 3,
+    "logged_at": "2026-10-02T11:14:03.502Z",
+    "exercise_name": "Curl haltère assis (supination)",
+    "session_date": "2026-10-01T22:00:00.000Z"
+  },
+  {
+    "id": "1ff7cb4e-ba48-447f-9005-6aeb22b7a56c",
+    "session_id": "45b41ccd-ed3f-4bdc-8184-dd6843534d3d",
+    "exercise_id": "3334c9ec-63d9-4fed-ae83-ff6ae24e1ac1",
+    "set_number": 3,
+    "weight_kg": "12",
+    "reps_done": 12,
+    "rir": 3,
+    "logged_at": "2026-10-02T11:18:06.753Z",
+    "exercise_name": "Curl haltère assis (supination)",
+    "session_date": "2026-10-01T22:00:00.000Z"
+  },
+  {
+    "id": "24ff6079-3839-4eef-877c-93330b7f5b72",
+    "session_id": "0c3f3d5d-91f3-403c-8d40-df91cd29f7f7",
+    "exercise_id": "3334c9ec-63d9-4fed-ae83-ff6ae24e1ac1",
+    "set_number": 1,
+    "weight_kg": "12",
+    "reps_done": 12,
+    "rir": 4,
+    "logged_at": "2026-10-21T14:56:13.204Z",
+    "exercise_name": "Curl haltère assis (supination)",
+    "session_date": "2026-10-20T22:00:00.000Z"
+  },
+  {
+    "id": "de64986f-7132-4ac0-947d-4ad76ab1074a",
+    "session_id": "0c3f3d5d-91f3-403c-8d40-df91cd29f7f7",
+    "exercise_id": "3334c9ec-63d9-4fed-ae83-ff6ae24e1ac1",
+    "set_number": 2,
+    "weight_kg": "12",
+    "reps_done": 12,
+    "rir": 4,
+    "logged_at": "2026-10-21T14:57:44.885Z",
+    "exercise_name": "Curl haltère assis (supination)",
+    "session_date": "2026-10-20T22:00:00.000Z"
+  },
+  {
+    "id": "7ad942c2-5751-4651-95dc-9df5cfd4841b",
+    "session_id": "0c3f3d5d-91f3-403c-8d40-df91cd29f7f7",
+    "exercise_id": "3334c9ec-63d9-4fed-ae83-ff6ae24e1ac1",
+    "set_number": 3,
+    "weight_kg": "12",
+    "reps_done": 12,
+    "rir": 4,
+    "logged_at": "2026-10-21T14:59:22.112Z",
+    "exercise_name": "Curl haltère assis (supination)",
+    "session_date": "2026-10-20T22:00:00.000Z"
+  }
+]
