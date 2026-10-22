@@ -178,7 +178,7 @@ const progress = computed(() => {
 }
 
 .rest-bar.done {
-  background: rgba(16, 185, 129, 0.12);
+  background: #0f1623;
   border-top-color: rgba(16, 185, 129, 0.3);
 }
 
@@ -197,8 +197,8 @@ const progress = computed(() => {
 }
 
 .rest-bar.done .bar-fill {
-  background: rgba(16, 185, 129, 0.25);
-  opacity: 1;
+  background: #10b981;
+  opacity: 0.22;
 }
 
 .bar-content {

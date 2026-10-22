@@ -4,27 +4,19 @@ Idées validées, pas prioritaires aujourd'hui. Triées par **effort** croissant
 
 ---
 
-## 0. Audit UI/UX « app pro de 2026 » (demandé le 22/10/2026)
+## 0. Audit UI/UX « app pro de 2026 » — reste à faire (audit du 22/10/2026)
 
-### Quoi
-Vincent : « elle est sympa mais je suis sûr qu'on peut améliorer plein de trucs en mode app professionnelle de 2026 ». Passer chaque écran (Today, Program, Stats, History, Settings, modal de set, chrono) au crible : lisibilité pendant la séance (mains occupées, écran à 1 m), nombre de taps par série, hiérarchie visuelle, cohérence des couleurs de section, états vides, feedback de sync, typographie. Sortir une liste courte classée par effet / effort, puis un QCM.
+### Fait le 22/10 (commits non poussés le soir même)
+Captures des vrais écrans (390 et 412 px, DPR 3) + Lighthouse mobile (perf 73, accessibilité 95, bonnes pratiques 100, CLS 0,43). Corrigé : connexion par mot de passe, nom d'exo sur 2 lignes avec la consigne de réserve dessous (`splitTarget`), boutons de série pleine largeur, chrono de repos (temps 40 px, boutons 46 px, sons sur l'horloge audio — l'ancien chantier 0 bis), flash « Jour de repos » au chargement, cardio en un tap à la durée cible, badge sync seulement quand ça coince (+ état « Hors ligne »), notes lisibles, en-tête stable + fonts non bloquantes + theme_color sombre, Settings allégé, restes du template Vite supprimés.
+
+### Reste
+- **Nav en SVG inline** : les 4 emojis de la barre (🏋️📋📊⚙️) se rendent différemment selon l'OS et font « bricolé ». 4 pictos inline, aucune dépendance. **M.**
+- **Programme en cache hors ligne** : sans réseau au chargement, `fetchActiveProgram` échoue silencieusement et la séance n'existe pas (les taps ne loguent rien, le badge dit juste « Hors ligne »). Mettre le dernier programme + jour en localStorage et démarrer dessus ; la file `offlineQueue` prend le relais pour les sets. **M.**
+- **Stats** : axe Y de « Séances / semaine » gradué en 0,5 ; passer `ticks.stepSize = 1`. **S.**
 
 ### Scope
-- D'abord des captures des vrais écrans, connecté (pas une lecture du code seule).
 - Pas de refonte : des coupes et des corrections, l'app doit rester reconnaissable.
-
-### Effort
-**M — audit 1 session, corrections 1-2 sessions.**
-
----
-
-## 0 bis. Chrono de repos : sons sur l'horloge audio (suite du correctif du 22/10)
-
-### Quoi
-`ExerciseTimer` pose désormais tous ses sons d'un coup sur l'horloge Web Audio (`scheduleSequence`), le JS n'affiche et ne vibre que. `RestTimerBar` fait encore sonner depuis `requestAnimationFrame`, qui s'arrête dès que l'écran est caché : mêmes bips en retard ou groupés. Même recette à appliquer (poser les 3 tics + l'accord à `endAt`, annuler sur +30 s / skip).
-
-### Effort
-**S — 30 min.**
+- Hors scope assumé : mode clair (couleurs en dur, l'app sert dans un garage le matin).
 
 ---
 
