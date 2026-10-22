@@ -676,7 +676,6 @@ watch(mobilityDone, done => { if (done) open.value.mobility = false })
 
 .catchup-banner span {
   flex: 1;
-  text-transform: capitalize;
 }
 
 .catchup-back {

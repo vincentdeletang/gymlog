@@ -161,40 +161,6 @@ async function openExportModal() {
           <div class="setting-sub">{{ userStore.user?.email }}</div>
         </div>
       </div>
-      <div class="setting-row">
-        <div class="setting-info">
-          <div class="setting-title">Meilleur streak</div>
-          <div class="setting-sub">🔥 {{ userStore.streakBest }} jours</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Science section -->
-    <div class="settings-section">
-      <div class="section-label">Science & contexte</div>
-      <div class="info-card">
-        <div class="info-item">
-          <span class="info-icon">🧬</span>
-          <div>
-            <div class="info-title">RIR 2-3 optimal</div>
-            <div class="info-desc">Hypertrophie maximale + protection articulaire (Refalo et al. 2024, Schoenfeld 2018). RIR 2 présélectionné par défaut.</div>
-          </div>
-        </div>
-        <div class="info-item">
-          <span class="info-icon">📊</span>
-          <div>
-            <div class="info-title">Volume optimal</div>
-            <div class="info-desc">~60 min/semaine en résistance (méta-analyse PMC 2023)</div>
-          </div>
-        </div>
-        <div class="info-item">
-          <span class="info-icon">⚠️</span>
-          <div>
-            <div class="info-title">Signaux d'alerte</div>
-            <div class="info-desc">RIR moyen &lt; 1 sur 3 séances → décharge. Streak &gt; 6 jours → repos.</div>
-          </div>
-        </div>
-      </div>
     </div>
 
     <!-- Equipment tare section -->
@@ -311,11 +277,6 @@ async function openExportModal() {
       <button class="signout-btn" @click="signOut">Se déconnecter</button>
     </div>
 
-    <!-- App info -->
-    <div class="app-info">
-      <div>GymLog v0.1.0</div>
-      <div>Vue 3 + Vite + Supabase</div>
-    </div>
 
     <div style="height: 80px" />
 
@@ -381,36 +342,6 @@ async function openExportModal() {
   margin-top: 1px;
 }
 
-.info-card {
-  background: #111827;
-  border: 1px solid #1f2937;
-  border-radius: 12px;
-  padding: 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.info-item {
-  display: flex;
-  gap: 10px;
-  align-items: flex-start;
-}
-
-.info-icon { font-size: 18px; flex-shrink: 0; margin-top: 1px; }
-
-.info-title {
-  font-size: 14px;
-  font-weight: 600;
-  color: #f9fafb;
-  margin-bottom: 2px;
-}
-
-.info-desc {
-  font-size: 12px;
-  color: #9ca3af;
-  line-height: 1.5;
-}
 
 .action-btn {
   width: 100%;
@@ -607,13 +538,4 @@ async function openExportModal() {
 
 .profile-textarea:focus { border-color: #3b82f6; }
 
-.app-info {
-  padding: 16px;
-  text-align: center;
-  color: #374151;
-  font-size: 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
 </style>
