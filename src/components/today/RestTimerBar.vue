@@ -12,7 +12,7 @@ const props = defineProps({
 })
 const emit = defineEmits(['done', 'dismiss', 'change'])
 
-const { playTick10, playComplete, vibrate } = useAudio()
+const { scheduleSequence, vibrate } = useAudio()
 
 const remaining = ref(props.durationSec)
 const total = ref(props.durationSec)
@@ -20,6 +20,24 @@ const finished = ref(false)
 let endAt = 0
 let raf = null
 const fired = new Set()
+let cues = null
+
+// Les sons sont posés d'un bloc sur l'horloge audio (cf. ExerciseTimer) : le
+// requestAnimationFrame ci-dessous s'arrête dès que l'écran est caché, et les bips
+// arrivaient en retard ou groupés. Le JS n'affiche et ne vibre que.
+function scheduleCues() {
+  if (cues) { cues.cancel(); cues = null }
+  const rem = (endAt - Date.now()) / 1000
+  if (rem <= 0) return
+  const events = []
+  if (total.value >= 60 && !fired.has('half')) {
+    const halfFromNow = Math.floor(total.value / 2) - (total.value - rem)
+    if (halfFromNow > 0) events.push({ at: halfFromNow, kind: 'tick' })
+  }
+  for (let i = 3; i >= 1; i--) if (rem - i > 0) events.push({ at: rem - i, kind: 'tick' })
+  events.push({ at: rem, kind: 'complete' })
+  cues = scheduleSequence(events)
+}
 
 function tick() {
   const now = Date.now()
@@ -31,7 +49,6 @@ function tick() {
     const half = Math.floor(total.value / 2)
     if (!fired.has('half') && total.value - remaining.value >= half) {
       fired.add('half')
-      playTick10()
       vibrate([30])
     }
   }
@@ -40,14 +57,12 @@ function tick() {
   for (let i = 3; i >= 1; i--) {
     if (!fired.has(`c${i}`) && remaining.value === i) {
       fired.add(`c${i}`)
-      playTick10()
       vibrate([40])
     }
   }
 
   if (ms <= 0 && !finished.value) {
     finished.value = true
-    playComplete()
     vibrate([120, 60, 120])
     return
   }
@@ -65,6 +80,7 @@ function init(totalDuration, endAtMs) {
   if (totalDuration >= 60 && totalDuration - remNow >= Math.floor(totalDuration / 2)) fired.add('half')
   for (let i = 3; i >= 1; i--) if (remNow < i) fired.add(`c${i}`)
   if (endAt <= Date.now()) finished.value = true
+  scheduleCues()
   if (raf) cancelAnimationFrame(raf)
   raf = requestAnimationFrame(tick)
 }
@@ -80,16 +96,19 @@ function add(seconds) {
     fired.clear()
     raf = requestAnimationFrame(tick)
   }
+  scheduleCues()
   emit('change', endAt)
 }
 
 function sub(seconds) {
   endAt = Math.max(Date.now(), endAt - seconds * 1000)
+  scheduleCues()
   emit('change', endAt)
 }
 
 function dismiss() {
   if (raf) cancelAnimationFrame(raf)
+  if (cues) { cues.cancel(); cues = null }
   emit('dismiss')
 }
 
@@ -109,6 +128,7 @@ onMounted(() => {
 onUnmounted(() => {
   document.removeEventListener('visibilitychange', onVisibility)
   if (raf) cancelAnimationFrame(raf)
+  if (cues) { cues.cancel(); cues = null }
 })
 
 const display = computed(() => {
@@ -128,21 +148,16 @@ const progress = computed(() => {
   <div class="rest-bar" :class="{ done: finished }" :style="{ '--accent': accent }">
     <div class="bar-fill" :style="{ width: progress * 100 + '%' }" />
     <div class="bar-content">
-      <div class="bar-info">
-        <div class="bar-label">
-          <span v-if="!finished">Repos</span>
-          <span v-else>✓ Repos terminé</span>
-        </div>
-        <div class="bar-sub" v-if="exerciseName">
-          {{ exerciseName }} · S{{ setNumber }}
-        </div>
+      <div class="bar-label">
+        <span v-if="!finished">Repos</span>
+        <span v-else>✓ Prêt</span>
       </div>
 
       <div class="bar-time">{{ display }}</div>
 
       <div class="bar-actions">
-        <button class="btn-adj" @click="sub(15)" :disabled="finished" aria-label="−15s">−15</button>
-        <button class="btn-adj" @click="add(30)" aria-label="+30s">+30</button>
+        <button class="btn-adj" @click="sub(15)" :disabled="finished">−15</button>
+        <button class="btn-adj" @click="add(30)">+30</button>
         <button class="btn-close" @click="dismiss" aria-label="Fermer">✕</button>
       </div>
     </div>
@@ -190,44 +205,33 @@ const progress = computed(() => {
   position: relative;
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 10px 14px;
-  min-height: 56px;
-}
-
-.bar-info {
-  flex: 1;
-  min-width: 0;
+  gap: 12px;
+  padding: 8px 12px;
+  min-height: 64px;
 }
 
 .bar-label {
+  flex: 1;
+  min-width: 0;
   font-family: 'Barlow Condensed', sans-serif;
-  font-size: 13px;
+  font-size: 15px;
   font-weight: 700;
   color: #9ca3af;
-  letter-spacing: 1px;
+  letter-spacing: 1.5px;
   text-transform: uppercase;
 }
 
 .rest-bar.done .bar-label { color: #10b981; }
 
-.bar-sub {
-  font-size: 11px;
-  color: #6b7280;
-  margin-top: 1px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
 .bar-time {
   font-family: 'Barlow Condensed', sans-serif;
-  font-size: 26px;
+  font-size: 40px;
   font-weight: 800;
   color: #f9fafb;
+  line-height: 1;
   letter-spacing: 0.5px;
   font-variant-numeric: tabular-nums;
-  min-width: 56px;
+  min-width: 84px;
   text-align: right;
 }
 
@@ -244,13 +248,14 @@ const progress = computed(() => {
   border: 1px solid #374151;
   color: #e5e7eb;
   font-family: 'Barlow Condensed', sans-serif;
-  font-size: 13px;
+  font-size: 16px;
   font-weight: 700;
   letter-spacing: 0.3px;
-  padding: 6px 8px;
-  border-radius: 8px;
+  padding: 0 6px;
+  border-radius: 10px;
   cursor: pointer;
-  min-width: 38px;
+  min-width: 46px;
+  min-height: 46px;
   transition: background 0.1s;
 }
 
@@ -259,12 +264,12 @@ const progress = computed(() => {
 
 .btn-close {
   background: transparent;
-  border: 1px solid #1f2937;
-  color: #6b7280;
-  font-size: 14px;
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
+  border: 1px solid #374151;
+  color: #9ca3af;
+  font-size: 16px;
+  width: 46px;
+  height: 46px;
+  border-radius: 10px;
   cursor: pointer;
   display: flex;
   align-items: center;
