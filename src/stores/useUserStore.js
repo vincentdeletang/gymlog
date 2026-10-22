@@ -34,6 +34,11 @@ export const useUserStore = defineStore('user', () => {
     return { error }
   }
 
+  async function signInWithPassword(email, password) {
+    const { error } = await supabase.auth.signInWithPassword({ email, password })
+    return { error }
+  }
+
   async function signOut() {
     await supabase.auth.signOut()
   }
@@ -103,7 +108,7 @@ export const useUserStore = defineStore('user', () => {
     session, userState, loading,
     user, isAuthenticated,
     streak, streakBest, profileData,
-    init, sendMagicLink, signOut,
+    init, sendMagicLink, signInWithPassword, signOut,
     fetchUserState, updateStreak, saveProfileData,
   }
 })

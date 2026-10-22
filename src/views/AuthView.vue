@@ -7,23 +7,45 @@ const userStore = useUserStore()
 const router = useRouter()
 
 const email = ref('')
+const password = ref('')
 const sent = ref(false)
 const loading = ref(false)
+const sendingLink = ref(false)
 const error = ref('')
 
+const MESSAGES = {
+  'Invalid login credentials': 'Email ou mot de passe incorrect.',
+  'Email not confirmed': 'Email pas encore confirmé.',
+  'email rate limit exceeded': 'Trop d\'envois : réessaie dans une heure.',
+}
+function translate(err) {
+  return MESSAGES[err.message] ?? err.message
+}
+
 async function submit() {
-  if (!email.value.trim()) return
+  if (!email.value.trim() || !password.value) return
   loading.value = true
   error.value = ''
-
-  const { error: err } = await userStore.sendMagicLink(email.value.trim())
+  const { error: err } = await userStore.signInWithPassword(email.value.trim(), password.value)
   loading.value = false
-
   if (err) {
-    error.value = err.message
-  } else {
-    sent.value = true
+    error.value = translate(err)
+    return
   }
+  router.replace('/today')
+}
+
+async function sendLink() {
+  if (!email.value.trim()) {
+    error.value = 'Saisis ton email pour recevoir le lien.'
+    return
+  }
+  sendingLink.value = true
+  error.value = ''
+  const { error: err } = await userStore.sendMagicLink(email.value.trim())
+  sendingLink.value = false
+  if (err) error.value = translate(err)
+  else sent.value = true
 }
 </script>
 
@@ -36,34 +58,45 @@ async function submit() {
 
       <template v-if="!sent">
         <form @submit.prevent="submit" class="auth-form">
-          <label class="field-label">Adresse email</label>
+          <label class="field-label" for="auth-email">Email</label>
           <input
+            id="auth-email"
             v-model="email"
             type="email"
             inputmode="email"
-            autocomplete="email"
+            autocomplete="username"
             placeholder="toi@example.com"
-            class="email-input"
+            class="text-input"
+            required
+          />
+          <label class="field-label" for="auth-password">Mot de passe</label>
+          <input
+            id="auth-password"
+            v-model="password"
+            type="password"
+            autocomplete="current-password"
+            placeholder="••••••••"
+            class="text-input"
             required
           />
           <div v-if="error" class="error-msg">{{ error }}</div>
-          <button type="submit" class="submit-btn" :disabled="loading">
-            <span v-if="loading">Envoi en cours…</span>
-            <span v-else>Recevoir mon lien de connexion</span>
+          <button type="submit" class="submit-btn" :disabled="loading || sendingLink">
+            <span v-if="loading">Connexion…</span>
+            <span v-else>Se connecter</span>
           </button>
         </form>
-        <p class="auth-note">
-          Un lien magique sera envoyé à ton email.<br />
-          Pas de mot de passe, sécurité maximale.
-        </p>
+        <button type="button" class="link-btn" :disabled="loading || sendingLink" @click="sendLink">
+          <span v-if="sendingLink">Envoi en cours…</span>
+          <span v-else>Recevoir un lien de connexion par email</span>
+        </button>
       </template>
 
       <template v-else>
         <div class="sent-state">
           <div class="sent-icon">📬</div>
-          <h2>Email envoyé !</h2>
-          <p>Vérifie ta boîte mail et clique sur le lien pour accéder à GymLog.</p>
-          <button class="retry-btn" @click="sent = false">Ressaisir l'email</button>
+          <h2>Email envoyé</h2>
+          <p>Ouvre le lien reçu pour entrer dans GymLog. Pense au dossier spam.</p>
+          <button class="retry-btn" @click="sent = false">Retour</button>
         </div>
       </template>
     </div>
@@ -113,16 +146,17 @@ h1 {
   width: 100%;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
   margin-top: 8px;
 }
 
 .field-label {
   font-size: 13px;
   color: #9ca3af;
+  margin-top: 4px;
 }
 
-.email-input {
+.text-input {
   background: #111827;
   border: 2px solid #1f2937;
   border-radius: 12px;
@@ -134,7 +168,7 @@ h1 {
   transition: border-color 0.15s;
 }
 
-.email-input:focus {
+.text-input:focus {
   border-color: #3b82f6;
 }
 
@@ -159,6 +193,7 @@ h1 {
   cursor: pointer;
   transition: background 0.15s;
   min-height: 52px;
+  margin-top: 8px;
 }
 
 .submit-btn:disabled {
@@ -170,12 +205,21 @@ h1 {
   background: #2563eb;
 }
 
-.auth-note {
-  font-size: 12px;
-  color: #6b7280;
-  text-align: center;
-  line-height: 1.6;
-  margin: 0;
+.link-btn {
+  background: transparent;
+  border: none;
+  color: #9ca3af;
+  font-size: 14px;
+  padding: 12px;
+  min-height: 44px;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.link-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .sent-state {
@@ -214,5 +258,6 @@ h1 {
   border-radius: 8px;
   cursor: pointer;
   margin-top: 8px;
+  min-height: 44px;
 }
 </style>
