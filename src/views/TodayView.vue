@@ -747,7 +747,8 @@ watch(mobilityDone, done => { if (done) open.value.mobility = false })
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 10px 12px;
+  padding: 12px 12px;
+  min-height: 48px;
   background: #111827;
   border: 1px solid #1f2937;
   border-radius: 10px;
@@ -809,8 +810,8 @@ watch(mobilityDone, done => { if (done) open.value.mobility = false })
 .section-label.mobility { color: #06b6d4; }
 
 .section-sub {
-  font-size: 12px;
-  color: #6b7280;
+  font-size: 13px;
+  color: #9ca3af;
 }
 
 .loading {

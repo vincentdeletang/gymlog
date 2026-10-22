@@ -33,8 +33,8 @@ const hasMore = computed(() => {
 }
 
 .notes-text {
-  font-size: 12px;
-  color: #6b7280;
+  font-size: 13px;
+  color: #9ca3af;
   line-height: 1.45;
 }
 
@@ -52,8 +52,9 @@ const hasMore = computed(() => {
 .notes-toggle {
   background: none;
   border: none;
-  padding: 2px 0;
-  font-size: 11px;
+  padding: 6px 0;
+  min-height: 32px;
+  font-size: 13px;
   font-weight: 700;
   letter-spacing: 0.3px;
   color: #60a5fa;

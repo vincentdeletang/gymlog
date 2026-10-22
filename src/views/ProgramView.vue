@@ -223,7 +223,7 @@ const TYPE_ICON  = { strength: '💪', cardio: '🏃', rest: '😴' }
 
 .prog-name {
   font-size: 13px;
-  color: #6b7280;
+  color: #9ca3af;
   margin-top: 2px;
 }
 
@@ -392,8 +392,8 @@ const TYPE_ICON  = { strength: '💪', cardio: '🏃', rest: '😴' }
 }
 
 .detail-session {
-  font-size: 12px;
-  color: #6b7280;
+  font-size: 13px;
+  color: #9ca3af;
   margin-top: 3px;
 }
 
@@ -450,10 +450,10 @@ const TYPE_ICON  = { strength: '💪', cardio: '🏃', rest: '😴' }
 
 .section-sub {
   font-weight: 500;
-  color: #4b5563;
+  color: #9ca3af;
   letter-spacing: 0;
   text-transform: none;
-  font-size: 11px;
+  font-size: 12px;
 }
 
 .ex-list {
@@ -476,7 +476,7 @@ const TYPE_ICON  = { strength: '💪', cardio: '🏃', rest: '😴' }
 }
 
 .ex-name {
-  font-size: 13px;
+  font-size: 15px;
   color: #e5e7eb;
   flex: 1;
   min-width: 0;
@@ -493,8 +493,8 @@ const TYPE_ICON  = { strength: '💪', cardio: '🏃', rest: '😴' }
 .cardio-dur { color: #f59e0b; }
 
 .ex-notes {
-  font-size: 11px;
-  color: #4b5563;
+  font-size: 13px;
+  color: #9ca3af;
   line-height: 1.4;
   margin-top: 3px;
 }
