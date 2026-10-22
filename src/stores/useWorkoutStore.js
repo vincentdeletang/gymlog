@@ -241,33 +241,33 @@ export const useWorkoutStore = defineStore('workout', () => {
     }
   }
 
+  // « Dernière fois » par exercice : la dernière séance terminée où CET exo a été logué,
+  // quel que soit le jour de programme. Avant, on prenait la dernière séance du même
+  // program_day : un exo déplacé entre jours (UPDATE program_day_id, cf. CLAUDE.md)
+  // perdait son historique dans la modal pendant une semaine.
+  const PREVIOUS_WINDOW_DAYS = 120
   async function loadPreviousData(programDayId, targetDate = todayISO()) {
     const userStore = useUserStore()
+    const since = new Date(targetDate)
+    since.setDate(since.getDate() - PREVIOUS_WINDOW_DAYS)
 
-    // Last completed session for the same program_day, strictly before targetDate
-    const { data: prevSession } = await supabase
-      .from('workout_sessions')
-      .select('id')
-      .eq('user_id', userStore.user.id)
-      .eq('program_day_id', programDayId)
-      .eq('completed', true)
-      .lt('session_date', targetDate)
-      .order('session_date', { ascending: false })
-      .limit(1)
-      .maybeSingle()
-
-    if (!prevSession) {
-      previousSets.value = {}
-      return
-    }
-
-    const { data: prevLogs } = await supabase
+    const { data: logs } = await supabase
       .from('set_logs')
-      .select('*')
-      .eq('session_id', prevSession.id)
+      .select('exercise_id, set_number, weight_kg, reps_done, rir, exercises!inner(program_day_id), workout_sessions!inner(user_id, completed, session_date)')
+      .eq('exercises.program_day_id', programDayId)
+      .eq('workout_sessions.user_id', userStore.user.id)
+      .eq('workout_sessions.completed', true)
+      .lt('workout_sessions.session_date', targetDate)
+      .gte('workout_sessions.session_date', since.toISOString().slice(0, 10))
 
+    const latestDate = {}
+    for (const log of (logs ?? [])) {
+      const d = log.workout_sessions.session_date
+      if (!latestDate[log.exercise_id] || d > latestDate[log.exercise_id]) latestDate[log.exercise_id] = d
+    }
     const map = {}
-    for (const log of (prevLogs ?? [])) {
+    for (const log of (logs ?? [])) {
+      if (log.workout_sessions.session_date !== latestDate[log.exercise_id]) continue
       if (!map[log.exercise_id]) map[log.exercise_id] = {}
       map[log.exercise_id][log.set_number] = {
         weight_kg: log.weight_kg,
