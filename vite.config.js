@@ -15,7 +15,7 @@ export default defineConfig({
         name: 'GymLog',
         short_name: 'GymLog',
         description: "Suivi d'entraînement personnel",
-        theme_color: '#3b82f6',
+        theme_color: '#0a0e17',
         background_color: '#0a0e17',
         display: 'standalone',
         orientation: 'portrait',

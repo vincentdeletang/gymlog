@@ -5,14 +5,15 @@ const userStore = useUserStore()
 </script>
 
 <template>
-  <div class="streak-bar" v-if="userStore.userState && userStore.streak > 0">
-    <span class="streak">🔥 {{ userStore.streak }} jours de suite</span>
+  <div class="streak-bar">
+    <span v-if="userStore.userState && userStore.streak > 0" class="streak">🔥 {{ userStore.streak }} jours de suite</span>
   </div>
 </template>
 
 <style scoped>
 .streak-bar {
   padding: 8px 16px 4px;
+  min-height: 29px;
 }
 
 .streak {

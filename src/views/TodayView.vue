@@ -619,6 +619,7 @@ watch(mobilityDone, done => { if (done) open.value.mobility = false })
   align-items: center;
   gap: 10px;
   margin-bottom: 2px;
+  min-height: 34px;
 }
 
 .day-name {
@@ -646,6 +647,7 @@ watch(mobilityDone, done => { if (done) open.value.mobility = false })
 .session-name {
   font-size: 14px;
   color: #9ca3af;
+  min-height: 21px;
 }
 
 .warning-banner {
@@ -821,6 +823,7 @@ watch(mobilityDone, done => { if (done) open.value.mobility = false })
   padding: 40px;
   gap: 12px;
   color: #9ca3af;
+  min-height: 60vh;
 }
 
 .spinner {
