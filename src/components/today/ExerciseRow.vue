@@ -274,7 +274,7 @@ const SECTION_BADGE = {
 
 .sets-row {
   display: flex;
-  gap: 6px;
+  gap: 8px;
   flex-wrap: wrap;
 }
 </style>
