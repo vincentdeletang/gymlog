@@ -1107,6 +1107,13 @@ Dans Supabase Dashboard → **Database** → **Extensions** :
 
 Code source : `supabase/functions/monthly-backup/index.ts`
 
+> **Depuis le 2026-10-27, le déploiement se fait en ligne de commande** (jeton personnel `SUPABASE_ACCESS_TOKEN` dans `.env`, créé sur Dashboard → Account → Access Tokens) :
+> ```
+> npx supabase functions deploy monthly-backup --project-ref <ref>   # avec SUPABASE_ACCESS_TOKEN exporté depuis .env
+> node scripts/trigger_backup.mjs                                     # déclenche la sauvegarde comme le cron et lit la réponse HTTP
+> ```
+> Incident du 01/07 → 01/10/2026 : le cron tournait (« succeeded »), mais la fonction rendait 500 (`soreness_logs` supprimée par la 041, encore listée dans TABLES). Les 4 mails manquants n'ont pas de rattrapage : le backup est un instantané, celui du 27/10 contient tout. La procédure manuelle ci-dessous reste valable en secours.
+
 1. Dashboard → **Edge Functions** → **Deploy a new function**
 2. Nom : `monthly-backup`
 3. Coller le contenu de `supabase/functions/monthly-backup/index.ts`
