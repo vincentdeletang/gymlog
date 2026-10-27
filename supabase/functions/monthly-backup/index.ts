@@ -14,7 +14,6 @@ const TABLES = [
   'set_logs',
   'cardio_block_logs',
   'bodyweight_logs',
-  'soreness_logs',
   'user_state',
 ] as const
 
@@ -109,7 +108,7 @@ Deno.serve(async (req) => {
       text:
         `Backup automatique GymLog du ${yyyy}-${mm}-${dd}.\n\n` +
         `${totalRows} lignes sur ${TABLES.length} tables (${sizeKb} Ko).\n\n` +
-        `Le JSON joint contient toutes tes données — sessions, sets, poids corporel, soreness, programme.\n` +
+        `Le JSON joint contient toutes tes données — sessions, sets, poids corporel, programme.\n` +
         `C'est ta sauvegarde de secours, garde ce mail.`,
       attachments: [{ filename, content: base64 }],
     }),
