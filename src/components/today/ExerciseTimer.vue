@@ -21,18 +21,22 @@ const PREP_SEC = 3
 // plus sonner : il n'affiche et ne vibre que. Avant, chaque bip dépendait d'un setInterval
 // que le téléphone ralentit (écran qui s'assombrit, onglet caché) : bips en retard, groupés,
 // ou « 3 s avant la fin » selon le rattrapage.
-function cueEvents(target) {
+// Plage (« 20-30s ») : un « go » au minimum atteint, et le chrono s'arrête SEUL au maximum.
+// Avant, il passait en « bonus » au minimum et ne s'arrêtait qu'au bouton : il fallait se
+// relever pour appuyer, le temps logué prenait ce délai (le user, 28/10).
+function cueEvents(stop, min) {
   const ev = []
   for (let i = 0; i < PREP_SEC; i++) ev.push({ at: i, kind: 'prep' })
   ev.push({ at: PREP_SEC, kind: 'go' })
+  if (min && min < stop) ev.push({ at: PREP_SEC + min, kind: 'go' })
   for (let i = 3; i >= 1; i--) {
-    if (target - i > 0) ev.push({ at: PREP_SEC + target - i, kind: 'tick' })
+    if (stop - i > 0 && stop - i !== min) ev.push({ at: PREP_SEC + stop - i, kind: 'tick' })
   }
-  ev.push({ at: PREP_SEC + target, kind: 'complete' })
+  ev.push({ at: PREP_SEC + stop, kind: 'complete' })
   return ev
 }
 
-const phase = ref('prep') // 'prep' | 'run' | 'between' | 'post'
+const phase = ref('prep') // 'prep' | 'run' | 'between'
 const side = ref(1)
 const prepCount = ref(3)
 const elapsedMs = ref(0)
@@ -58,25 +62,27 @@ const accent = computed(() => SECTION_COLOR[props.exercise?.section] ?? '#3b82f6
 
 const elapsedSec = computed(() => Math.floor(elapsedMs.value / 1000))
 
+// Le chrono s'arrête seul ici : le max de la plage, ou la cible fixe.
+const stopAt = computed(() => (props.isRange ? props.targetMax : props.targetSeconds))
+
 const remainingSec = computed(() =>
-  Math.max(0, props.targetSeconds - elapsedSec.value)
+  Math.max(0, stopAt.value - elapsedSec.value)
 )
 
-const overtimeSec = computed(() =>
-  Math.max(0, elapsedSec.value - props.targetSeconds)
+const minReached = computed(() =>
+  props.isRange && phase.value === 'run' && elapsedSec.value >= props.targetSeconds
 )
 
 const progress = computed(() => {
   if (phase.value === 'prep') return 0
-  if (phase.value === 'post') return 1
-  return Math.min(elapsedMs.value / (props.targetSeconds * 1000), 1)
+  return Math.min(elapsedMs.value / (stopAt.value * 1000), 1)
 })
 
 const displayTime = computed(() => {
   if (phase.value === 'prep' || phase.value === 'between') {
     return String(Math.max(prepCount.value, 0))
   }
-  const s = phase.value === 'post' ? overtimeSec.value : remainingSec.value
+  const s = remainingSec.value
   const m = Math.floor(s / 60)
   const ss = String(s % 60).padStart(2, '0')
   return `${m}:${ss}`
@@ -112,32 +118,30 @@ function checkMilestones() {
   if (phase.value !== 'run') return
 
   const sec = elapsedSec.value
-  const target = props.targetSeconds
+  const stop = stopAt.value
+
+  if (props.isRange && sec >= props.targetSeconds) fireOnce('min', () => vibrate([120]))
 
   for (let i = 3; i >= 1; i--) {
-    const t = target - i
+    const t = stop - i
     if (t > 0 && sec >= t) {
       fireOnce(`count_${i}`, () => vibrate([30]))
     }
   }
 
-  if (sec >= target) {
+  if (sec >= stop) {
     if (props.perSide && side.value === 1) {
       fireOnce('target_side1', () => vibrate([120, 60, 120]))
       startBetween()
       return
     }
     fireOnce('target', () => vibrate([200, 80, 200]))
-    if (props.isRange) {
-      phase.value = 'post'
-    } else {
-      doStop()
-    }
+    doStop()
   }
 }
 
 function loop() {
-  if (phase.value !== 'run' && phase.value !== 'post') return
+  if (phase.value !== 'run') return
   elapsedMs.value = Date.now() - startRunTime
   rafId = requestAnimationFrame(loop)
 }
@@ -161,7 +165,7 @@ function runPrep(onDone) {
   prepStart = Date.now()
   prepCount.value = PREP_SEC
   if (cues) cues.cancel()
-  cues = scheduleSequence(cueEvents(props.targetSeconds))
+  cues = scheduleSequence(cueEvents(stopAt.value, props.isRange ? props.targetSeconds : null))
   vibrate([50])
   let lastShown = PREP_SEC
   prepTimer = setInterval(() => {
@@ -206,7 +210,7 @@ function releaseWakeLock() {
 
 function onVisibility() {
   if (document.visibilityState !== 'visible') return
-  if (phase.value === 'run' || phase.value === 'post') {
+  if (phase.value === 'run') {
     elapsedMs.value = Date.now() - startRunTime
     checkMilestones()
     requestWakeLock()
@@ -264,7 +268,7 @@ onUnmounted(() => {
           <div class="ring-inner">
             <div v-if="phase === 'prep' || phase === 'between'" class="prep-label">{{ prepLabel }}</div>
             <div class="big-time" :class="phase">{{ displayTime }}</div>
-            <div v-if="phase === 'post'" class="overtime-label">BONUS</div>
+            <div v-if="minReached" class="overtime-label">MINI ✓</div>
           </div>
         </div>
       </div>
@@ -387,10 +391,6 @@ onUnmounted(() => {
   padding: 4px 12px;
   border-radius: 20px;
   border: 1px solid;
-}
-
-.big-time.post {
-  color: var(--accent);
 }
 
 .timer-actions {
