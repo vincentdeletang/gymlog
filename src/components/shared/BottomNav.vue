@@ -4,11 +4,17 @@ import { useRoute, useRouter } from 'vue-router'
 const route = useRoute()
 const router = useRouter()
 
+// Pictos SVG inline (trait = currentColor, donc bleu sur l'onglet actif) : les emojis se
+// rendaient différemment selon le téléphone et faisaient bricolé.
 const tabs = [
-  { path: '/today',   icon: '🏋️', label: "Aujourd'hui" },
-  { path: '/history', icon: '📋', label: 'Historique' },
-  { path: '/stats',   icon: '📊', label: 'Progression' },
-  { path: '/settings',icon: '⚙️', label: 'Réglages' },
+  { path: '/today',   label: "Aujourd'hui",
+    icon: '<path d="M6 7v10M18 7v10M3 10v4M21 10v4M6 12h12"/>' },
+  { path: '/history', label: 'Historique',
+    icon: '<rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 3h6v3H9zM9 11h6M9 15h4"/>' },
+  { path: '/stats',   label: 'Progression',
+    icon: '<path d="M4 20h16M7 16v-5M12 16V7M17 16V9"/>' },
+  { path: '/settings',label: 'Réglages',
+    icon: '<path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/>' },
 ]
 
 // Imperative push instead of <router-link> — vue-router's click interceptor
@@ -30,7 +36,8 @@ function go(path) {
       :class="{ active: route.path === tab.path }"
       @click="go(tab.path)"
     >
-      <span class="tab-icon">{{ tab.icon }}</span>
+      <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+           stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" v-html="tab.icon" />
       <span class="tab-label">{{ tab.label }}</span>
     </button>
   </nav>
@@ -78,8 +85,8 @@ function go(path) {
 }
 
 .tab-icon {
-  font-size: 20px;
-  line-height: 1;
+  width: 22px;
+  height: 22px;
 }
 
 .tab-label {

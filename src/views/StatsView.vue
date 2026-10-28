@@ -199,6 +199,8 @@ function getWeekNumber(d) {
       <div class="block-title">Séances / semaine</div>
       <ProgressChart
         type="bar"
+        :y-step="1"
+        :y-min="0"
         :labels="weeklyChartData.labels"
         :datasets="[{
           label: 'Séances',

@@ -9,10 +9,11 @@ Idées validées, pas prioritaires aujourd'hui. Triées par **effort** croissant
 ### Fait le 22/10 (commits non poussés le soir même)
 Captures des vrais écrans (390 et 412 px, DPR 3) + Lighthouse mobile (perf 73, accessibilité 95, bonnes pratiques 100, CLS 0,43). Corrigé : connexion par mot de passe, nom d'exo sur 2 lignes avec la consigne de réserve dessous (`splitTarget`), boutons de série pleine largeur, chrono de repos (temps 40 px, boutons 46 px, sons sur l'horloge audio — l'ancien chantier 0 bis), flash « Jour de repos » au chargement, cardio en un tap à la durée cible, badge sync seulement quand ça coince (+ état « Hors ligne »), notes lisibles, en-tête stable + fonts non bloquantes + theme_color sombre, Settings allégé, restes du template Vite supprimés.
 
+### Fait le 28/10
+Nav en pictos SVG inline (fini les emojis), axe « Séances / semaine » gradué en entiers depuis 0.
+
 ### Reste
-- **Nav en SVG inline** : les 4 emojis de la barre (🏋️📋📊⚙️) se rendent différemment selon l'OS et font « bricolé ». 4 pictos inline, aucune dépendance. **M.**
 - **Programme en cache hors ligne** : sans réseau au chargement, `fetchActiveProgram` échoue silencieusement et la séance n'existe pas (les taps ne loguent rien, le badge dit juste « Hors ligne »). Mettre le dernier programme + jour en localStorage et démarrer dessus ; la file `offlineQueue` prend le relais pour les sets. **M.**
-- **Stats** : axe Y de « Séances / semaine » gradué en 0,5 ; passer `ticks.stepSize = 1`. **S.**
 
 ### Scope
 - Pas de refonte : des coupes et des corrections, l'app doit rester reconnaissable.
