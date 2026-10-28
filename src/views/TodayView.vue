@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, watch, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import ExerciseRow from '@/components/today/ExerciseRow.vue'
 import SetLogModal from '@/components/today/SetLogModal.vue'
@@ -14,6 +14,9 @@ import { useProgramStore } from '@/stores/useProgramStore'
 import { useWorkoutStore } from '@/stores/useWorkoutStore'
 import { useAudio } from '@/composables/useAudio'
 import { parseTimeTarget } from '@/lib/parseTarget'
+import { partnerAfter, nextAfterRest, canAutoOpen, prepItems } from '@/lib/sessionFlow'
+import { getAvailablePlates } from '@/lib/plateCalc'
+import { useWakeLock } from '@/composables/useWakeLock'
 import { todayISO, dayOfWeekFromISO, formatLongDate, formatShortDate } from '@/lib/formatDate'
 
 const route = useRoute()
@@ -60,7 +63,7 @@ function persistRest(t) {
   } catch {}
 }
 
-function startRestTimer(exercise, setNumber) {
+function startRestTimer(exercise, setNumber, next = null) {
   if (inCatchUpMode.value) return
   const seconds = REST_BY_SECTION[exercise.section] ?? 0
   if (!seconds) return
@@ -73,8 +76,38 @@ function startRestTimer(exercise, setNumber) {
     setNumber,
     accent: SECTION_ACCENT[exercise.section] ?? '#3b82f6',
     key: restKey,
+    // La série à ouvrir quand le repos finit (persistée : survit au rechargement).
+    next: next ? { exerciseId: next.exercise.id, setNumber: next.setNumber } : null,
   }
   persistRest(restTimer.value)
+}
+
+// ── Enchaînement (28/10/2026) ───────────────────────────────────────────────────────────
+// Après une série fraîche : si l'exo est en paire (superset_group) et que le partenaire n'a
+// pas fait ce tour, sa série s'ouvre tout de suite, sans repos. Sinon le repos part, et à sa
+// fin la série suivante s'ouvre seule, pré-remplie : il ne reste qu'à valider.
+async function afterFreshLog(exercise, setNumber) {
+  if (inCatchUpMode.value) return
+  const day = programStore.activeExercises
+  const partner = partnerAfter(exercise, setNumber, day, workoutStore.isSetLogged)
+  if (partner) {
+    dismissRestTimer()
+    if (canAutoOpen(partner)) {
+      await nextTick()
+      openSetModal({ exercise: partner, setNumber })
+    }
+    return
+  }
+  startRestTimer(exercise, setNumber, nextAfterRest(exercise, setNumber, day, workoutStore.isSetLogged))
+}
+
+function onRestDone() {
+  const nx = restTimer.value?.next
+  if (!nx || modalOpen.value || timerOpen.value || timerInputOpen.value) return
+  const ex = programStore.activeExercises.find(e => e.id === nx.exerciseId)
+  if (!ex || workoutStore.isSetLogged(ex.id, nx.setNumber) || !canAutoOpen(ex)) return
+  dismissRestTimer()
+  openSetModal({ exercise: ex, setNumber: nx.setNumber })
 }
 function dismissRestTimer() { restTimer.value = null; persistRest(null) }
 function onRestChange(newEndAt) {
@@ -163,7 +196,7 @@ async function openSetModal({ exercise, setNumber }) {
     } else {
       await workoutStore.logSet({ exerciseId: exercise.id, setNumber, weightKg: null, repsDone: null, rir: null })
       playSuccess()
-      startRestTimer(exercise, setNumber)
+      afterFreshLog(exercise, setNumber)
     }
     return
   }
@@ -201,7 +234,7 @@ async function onTimerStop({ seconds }) {
     rir: null,
   })
   timerOpen.value = false
-  startRestTimer(ex, sn)
+  afterFreshLog(ex, sn)
 }
 
 function onTimerCancel() {
@@ -243,7 +276,8 @@ const modalSessionPrevSet = computed(() => {
 
 async function saveSet({ weightKg, repsDone, rir }) {
   const ex = modalExercise.value
-  const wasLogged = workoutStore.isSetLogged(ex.id, modalSetNumber.value)
+  const setNumber = modalSetNumber.value
+  const wasLogged = workoutStore.isSetLogged(ex.id, setNumber)
   await workoutStore.logSet({
     exerciseId: ex.id,
     setNumber: modalSetNumber.value,
@@ -258,7 +292,7 @@ async function saveSet({ weightKg, repsDone, rir }) {
       const pr = workoutStore.checkAndRecordPR(ex.id, weightKg, repsDone)
       if (pr) prFlash.value = { exerciseName: ex.name, ...pr }
     }
-    startRestTimer(ex, modalSetNumber.value)
+    afterFreshLog(ex, setNumber)
   }
 }
 
@@ -278,6 +312,22 @@ async function finishSession() {
     celebrating.value = true
   }
 }
+
+// La zone 2 chronométrée qui va au bout clôt la séance.
+function onZone2Done() {
+  if (canFinish.value && !inCatchUpMode.value) finishSession()
+}
+
+// Écran allumé du chargement de la séance jusqu'à sa clôture.
+useWakeLock(computed(() =>
+  !loading.value && !!workoutStore.currentSession && !sessionComplete.value && !inCatchUpMode.value && !isRestDay.value
+))
+
+// Ce qu'il faut installer avant de commencer, charges du jour comprises.
+const prepList = computed(() => {
+  if (loading.value || sessionComplete.value || inCatchUpMode.value || isRestDay.value) return []
+  return prepItems(programStore.activeExercises, workoutStore.getPreviousSet, getAvailablePlates())
+})
 
 function exitCatchUp() {
   router.push('/today')
@@ -334,6 +384,14 @@ watch(mobilityDone, done => { if (done) open.value.mobility = false })
       <div class="session-name" v-if="programStore.activeProgramDay">
         {{ programStore.activeProgramDay.name }}
       </div>
+    </div>
+
+    <!-- À préparer -->
+    <div v-if="prepList.length" class="prep-zone">
+      <span class="prep-title">À PRÉPARER</span>
+      <ul class="prep-list">
+        <li v-for="item in prepList" :key="item">{{ item }}</li>
+      </ul>
     </div>
 
     <!-- Catch-up banner -->
@@ -445,7 +503,7 @@ watch(mobilityDone, done => { if (done) open.value.mobility = false })
         <div v-show="open.cardio" class="section-body">
           <template v-for="(block, i) in cardioBlocks" :key="block.id">
             <BoxingTimer v-if="block.name === 'Sac de boxe'" :block="block" :index="i" @done="workoutStore.markCardioDone(block.id)" />
-            <CardioBlock v-else :block="block" :index="i" />
+            <CardioBlock v-else :block="block" :index="i" @timer-done="onZone2Done" />
           </template>
         </div>
       </div>
@@ -463,7 +521,7 @@ watch(mobilityDone, done => { if (done) open.value.mobility = false })
         <div v-show="open.cardio" class="section-body">
           <template v-for="(block, i) in cardioBlocks" :key="block.id">
             <BoxingTimer v-if="block.name === 'Sac de boxe'" :block="block" :index="i" @done="workoutStore.markCardioDone(block.id)" />
-            <CardioBlock v-else :block="block" :index="i" />
+            <CardioBlock v-else :block="block" :index="i" @timer-done="onZone2Done" />
           </template>
         </div>
       </div>
@@ -573,6 +631,7 @@ watch(mobilityDone, done => { if (done) open.value.mobility = false })
       :set-number="restTimer.setNumber"
       :accent="restTimer.accent"
       @change="onRestChange"
+      @done="onRestDone"
       @dismiss="dismissRestTimer"
     />
 
@@ -634,6 +693,30 @@ watch(mobilityDone, done => { if (done) open.value.mobility = false })
   min-height: 21px;
 }
 
+
+.prep-zone {
+  margin: 0 16px 12px;
+  padding: 10px 14px;
+  background: #111827;
+  border: 1px solid #1f2937;
+  border-radius: 10px;
+}
+
+.prep-title {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  color: #9ca3af;
+}
+
+.prep-list {
+  margin: 4px 0 0;
+  padding-left: 18px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: #e5e7eb;
+}
 
 .catchup-banner {
   margin: 0 16px 12px;

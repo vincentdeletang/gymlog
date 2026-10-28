@@ -1,15 +1,19 @@
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, ref, watch, onUnmounted } from 'vue'
 import { useWorkoutStore } from '@/stores/useWorkoutStore'
 import { suggestedDuration, durationDelta } from '@/lib/cardioProgression'
 import CardioDetailModal from './CardioDetailModal.vue'
+import { useAudio } from '@/composables/useAudio'
 
 const props = defineProps({
   block: Object,
   index: Number,
 })
 
+const emit = defineEmits(['timerDone'])
+
 const workoutStore = useWorkoutStore()
+const { scheduleSequence, vibrate } = useAudio()
 const done = computed(() => workoutStore.isCardioDone(props.block.id))
 const log  = computed(() => workoutStore.getCardioLog(props.block.id))
 const detailOpen = ref(false)
@@ -37,6 +41,96 @@ function onDetailSave(details) {
   workoutStore.markCardioDone(props.block.id, details)
   detailOpen.value = false
 }
+
+// ── Chrono de zone 2 (28/10/2026) ──────────────────────────────────────────────────────
+// Lancé en montant sur le tapis : bips sur les 3 dernières secondes, puis il logue la durée
+// et l'écran de séance clôt la séance (timerDone). Avant : un bouton « Fait » pressé, ou
+// oublié (2 zones 2 loguées sur 7 séances depuis le 19/10, dont une 5 h après).
+// L'heure de fin vit dans localStorage : le chrono survit au rechargement de la page.
+const TIMER_KEY = 'gymlog.cardioTimer'
+const running = ref(null) // { sessionId, blockId, startAt, endAt }
+const now = ref(Date.now())
+let loop = null
+let cues = null
+
+function persist(t) {
+  try { t ? localStorage.setItem(TIMER_KEY, JSON.stringify(t)) : localStorage.removeItem(TIMER_KEY) } catch {}
+}
+
+function scheduleCues() {
+  cues?.cancel()
+  const rem = (running.value.endAt - Date.now()) / 1000
+  const ev = []
+  for (let i = 3; i >= 1; i--) if (rem - i > 0) ev.push({ at: rem - i, kind: 'tick' })
+  if (rem > 0) ev.push({ at: rem, kind: 'complete' })
+  cues = scheduleSequence(ev)
+}
+
+function startLoop() {
+  clearInterval(loop)
+  loop = setInterval(() => {
+    now.value = Date.now()
+    if (running.value && now.value >= running.value.endAt) finish(true)
+  }, 250)
+}
+
+function clearTimer() {
+  clearInterval(loop); loop = null
+  cues?.cancel(); cues = null
+  running.value = null
+  persist(null)
+}
+
+function startZone2() {
+  const sessionId = workoutStore.currentSession?.id
+  if (!sessionId) return
+  const t0 = Date.now()
+  running.value = { sessionId, blockId: props.block.id, startAt: t0, endAt: t0 + targetMin.value * 60000 }
+  now.value = t0
+  persist(running.value)
+  scheduleCues()
+  startLoop()
+  vibrate([80])
+}
+
+// full = le chrono est allé au bout ; sinon arrêt à la main, on logue les minutes faites.
+function finish(full) {
+  const t = running.value
+  if (!t) return
+  const secs = full ? Math.round((t.endAt - t.startAt) / 1000) : Math.round((Date.now() - t.startAt) / 60000) * 60
+  clearTimer()
+  if (secs < 60) return
+  workoutStore.markCardioDone(props.block.id, { duration_seconds: secs })
+  if (full) {
+    vibrate([200, 80, 200])
+    emit('timerDone')
+  }
+}
+
+const remainingLabel = computed(() => {
+  if (!running.value) return ''
+  const s = Math.max(0, Math.ceil((running.value.endAt - now.value) / 1000))
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`
+})
+
+// Restauration après rechargement : la séance doit être chargée pour vérifier que le chrono
+// est bien celui de cette séance.
+watch(() => workoutStore.currentSession?.id, (sid) => {
+  if (!sid || running.value) return
+  let t = null
+  try { t = JSON.parse(localStorage.getItem(TIMER_KEY) || 'null') } catch {}
+  if (!t || t.blockId !== props.block.id) return
+  if (t.sessionId !== sid) { persist(null); return }
+  running.value = t
+  if (Date.now() >= t.endAt) { finish(true); return }
+  scheduleCues()
+  startLoop()
+}, { immediate: true })
+
+onUnmounted(() => {
+  clearInterval(loop)
+  cues?.cancel()
+})
 </script>
 
 <template>
@@ -60,7 +154,17 @@ function onDetailSave(details) {
       </div>
     </div>
 
-    <div class="block-actions">
+    <div v-if="running" class="block-actions">
+      <div class="z2-time">{{ remainingLabel }}</div>
+      <button class="edit-btn" @click="finish(false)">Arrêter</button>
+      <button class="edit-btn" @click="clearTimer">✕</button>
+    </div>
+
+    <button v-else-if="!done" class="z2-start" @click="startZone2">
+      ▶ Lancer {{ targetMin }} min
+    </button>
+
+    <div v-if="!running" class="block-actions">
       <button class="done-btn" :class="{ active: done }" @click="toggleDone">
         <template v-if="done">✓ {{ loggedMin ?? targetMin }} min</template>
         <template v-else>Fait · {{ targetMin }} min</template>
@@ -176,6 +280,35 @@ function onDetailSave(details) {
 .block-actions {
   display: flex;
   gap: 8px;
+}
+
+.z2-start {
+  width: 100%;
+  min-height: 56px;
+  background: #10b981;
+  color: #0a0e17;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+}
+
+.z2-start:active { transform: scale(0.98); }
+
+.z2-time {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 52px;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 40px;
+  font-weight: 800;
+  color: #10b981;
+  font-variant-numeric: tabular-nums;
 }
 
 .done-btn {

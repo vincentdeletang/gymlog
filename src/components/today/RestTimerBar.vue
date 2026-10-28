@@ -64,6 +64,9 @@ function tick() {
   if (ms <= 0 && !finished.value) {
     finished.value = true
     vibrate([120, 60, 120])
+    // Fin vécue en direct (pas un minuteur restauré déjà fini) : l'écran de séance ouvre la
+    // série suivante (enchaînement du 28/10).
+    emit('done')
     return
   }
   raf = requestAnimationFrame(tick)
