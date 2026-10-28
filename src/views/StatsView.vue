@@ -7,11 +7,9 @@ import BodyweightCard from '@/components/stats/BodyweightCard.vue'
 import WeeklyVolumeByMuscle from '@/components/stats/WeeklyVolumeByMuscle.vue'
 import DeloadAlert from '@/components/stats/DeloadAlert.vue'
 import PRList from '@/components/stats/PRList.vue'
-import { useUserStore } from '@/stores/useUserStore'
 import { useWorkoutStore } from '@/stores/useWorkoutStore'
 import { useProgramStore } from '@/stores/useProgramStore'
 
-const userStore = useUserStore()
 const workoutStore = useWorkoutStore()
 const programStore = useProgramStore()
 
@@ -188,7 +186,6 @@ function getWeekNumber(d) {
       <div class="block-title">Stats globales</div>
       <div class="stats-grid">
         <StatCard label="Séances" :value="totalSessions" icon="📋" color="#3b82f6" />
-        <StatCard label="Meilleur streak" :value="userStore.streakBest" icon="🔥" color="#f59e0b" />
       </div>
     </div>
 

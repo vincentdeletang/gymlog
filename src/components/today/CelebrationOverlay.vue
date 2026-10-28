@@ -4,7 +4,6 @@ import { useConfetti } from '@/composables/useConfetti'
 import { useAudio } from '@/composables/useAudio'
 
 const props = defineProps({
-  streakCount: Number,
   stats: Object, // { setsDone, tonnage, avgRir, durationSec, prCount }
 })
 
@@ -72,9 +71,6 @@ onMounted(() => {
         🏆 {{ stats.prCount }} {{ stats.prCount > 1 ? 'records battus' : 'record battu' }}
       </div>
 
-      <div v-if="streakCount > 1" class="streak-info">
-        🔥 {{ streakCount }} jours de suite
-      </div>
       <p class="tap-hint">Tap pour continuer</p>
     </div>
   </div>
@@ -170,11 +166,6 @@ onMounted(() => {
   letter-spacing: 0.5px;
 }
 
-.streak-info {
-  font-size: 20px;
-  color: #f59e0b;
-  font-weight: 600;
-}
 
 .tap-hint {
   font-size: 13px;

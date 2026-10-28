@@ -1,7 +1,6 @@
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import StreakBar from '@/components/shared/StreakBar.vue'
 import ExerciseRow from '@/components/today/ExerciseRow.vue'
 import SetLogModal from '@/components/today/SetLogModal.vue'
 import CardioBlock from '@/components/today/CardioBlock.vue'
@@ -13,7 +12,6 @@ import RestTimerBar from '@/components/today/RestTimerBar.vue'
 import PRFlash from '@/components/today/PRFlash.vue'
 import { useProgramStore } from '@/stores/useProgramStore'
 import { useWorkoutStore } from '@/stores/useWorkoutStore'
-import { useUserStore } from '@/stores/useUserStore'
 import { useAudio } from '@/composables/useAudio'
 import { parseTimeTarget } from '@/lib/parseTarget'
 import { todayISO, dayOfWeekFromISO, formatLongDate, formatShortDate } from '@/lib/formatDate'
@@ -22,12 +20,10 @@ const route = useRoute()
 const router = useRouter()
 const programStore = useProgramStore()
 const workoutStore = useWorkoutStore()
-const userStore = useUserStore()
 const { playSuccess } = useAudio()
 
 const loading = ref(true)
 const celebrating = ref(false)
-const earnedStreak = ref(0)
 const sessionStats = ref(null)
 
 // Modal state
@@ -278,7 +274,6 @@ async function finishSession() {
   const stats = workoutStore.computeSessionStats(exercisesById)
   const ok = await workoutStore.completeSession()
   if (ok) {
-    earnedStreak.value = userStore.streak
     sessionStats.value = stats
     celebrating.value = true
   }
@@ -298,9 +293,6 @@ async function saveSessionNotes() {
   if (trimmed === current) return
   await workoutStore.updateSessionNotes(trimmed || null)
 }
-
-const WARNING_STREAK = 7
-const streakWarning = computed(() => userStore.streak >= WARNING_STREAK)
 
 // Accordion state
 const open = ref({ rehab: true, main: true, cooldown: true, mobility: true, cardio: true })
@@ -327,8 +319,6 @@ watch(mobilityDone, done => { if (done) open.value.mobility = false })
 
 <template>
   <div class="today-view">
-    <StreakBar />
-
     <!-- Header -->
     <div class="today-header">
       <div class="day-title">
@@ -350,11 +340,6 @@ watch(mobilityDone, done => { if (done) open.value.mobility = false })
     <div v-if="inCatchUpMode" class="catchup-banner">
       <span>🎯 Mode rattrapage — séance du {{ formatLongDate(targetDate) }}</span>
       <button class="catchup-back" @click="exitCatchUp">Aujourd'hui →</button>
-    </div>
-
-    <!-- Streak warning -->
-    <div v-if="streakWarning && !inCatchUpMode" class="warning-banner">
-      ⚠️ {{ userStore.streak }} jours sans repos — pense à récupérer !
     </div>
 
     <!-- Rest day (masqué pendant le chargement : sans programme chargé, dayType vaut 'rest'
@@ -573,7 +558,6 @@ watch(mobilityDone, done => { if (done) open.value.mobility = false })
     <!-- Celebration overlay -->
     <CelebrationOverlay
       v-if="celebrating"
-      :streak-count="earnedStreak"
       :stats="sessionStats"
       @close="celebrating = false"
     />
@@ -650,15 +634,6 @@ watch(mobilityDone, done => { if (done) open.value.mobility = false })
   min-height: 21px;
 }
 
-.warning-banner {
-  margin: 0 16px 12px;
-  background: rgba(245,158,11,0.1);
-  border: 1px solid rgba(245,158,11,0.3);
-  border-radius: 10px;
-  padding: 10px 14px;
-  font-size: 13px;
-  color: #fbbf24;
-}
 
 .catchup-banner {
   margin: 0 16px 12px;
