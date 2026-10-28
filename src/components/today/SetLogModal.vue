@@ -154,7 +154,12 @@ async function switchMode() {
   await programStore.updateProgressionMode(props.exercise.id, target)
 }
 
-function bump(field, delta) {
+// Le template déballe les refs : `bump(weightKg, 1)` y passait la VALEUR (une chaîne), pas la
+// ref, et `field.value` valait undefined → les −/+ ne faisaient rien (signalé le 28/10).
+// On passe donc le nom du champ.
+const FIELDS = { weight: weightKg, reps: repsDone }
+function bump(name, delta) {
+  const field = FIELDS[name]
   const current = parseFloat(field.value)
   const base = Number.isFinite(current) ? current : 0
   field.value = String(Math.max(0, Math.round((base + delta) * 2) / 2))
@@ -225,7 +230,7 @@ onUnmounted(() => {
               <span v-if="exercise?.bars" class="target">+ {{ exercise.bars.weight_kg }}kg {{ exercise.bars.name }}</span>
             </label>
             <div class="field-row">
-              <button type="button" class="step-btn" aria-label="−1 kg" @click="bump(weightKg, -1)">−</button>
+              <button type="button" class="step-btn" aria-label="−1 kg" @click="bump('weight', -1)">−</button>
               <input
                 v-model="weightKg"
                 type="number"
@@ -235,7 +240,7 @@ onUnmounted(() => {
                 placeholder="Ex: 20"
                 class="field-input"
               />
-              <button type="button" class="step-btn" aria-label="+1 kg" @click="bump(weightKg, 1)">+</button>
+              <button type="button" class="step-btn" aria-label="+1 kg" @click="bump('weight', 1)">+</button>
             </div>
             <div v-if="plateBreakdown" class="plates-hint">
               <span class="plates-icon">⚖️</span> {{ plateBreakdown }}
@@ -253,7 +258,7 @@ onUnmounted(() => {
             </label>
             <div v-if="targetCue" class="cue">{{ targetCue }}</div>
             <div class="field-row">
-              <button type="button" class="step-btn" aria-label="−1 rep" @click="bump(repsDone, -1)">−</button>
+              <button type="button" class="step-btn" aria-label="−1 rep" @click="bump('reps', -1)">−</button>
               <input
                 v-model="repsDone"
                 type="number"
@@ -262,7 +267,7 @@ onUnmounted(() => {
                 placeholder="Ex: 10"
                 class="field-input"
               />
-              <button type="button" class="step-btn" aria-label="+1 rep" @click="bump(repsDone, 1)">+</button>
+              <button type="button" class="step-btn" aria-label="+1 rep" @click="bump('reps', 1)">+</button>
             </div>
           </div>
 
