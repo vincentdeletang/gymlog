@@ -245,31 +245,57 @@ export const useWorkoutStore = defineStore('workout', () => {
   // quel que soit le jour de programme. Avant, on prenait la dernière séance du même
   // program_day : un exo déplacé entre jours (UPDATE program_day_id, cf. CLAUDE.md)
   // perdait son historique dans la modal pendant une semaine.
+  //
+  // Un même exo programmé plusieurs jours (même nom, même barre : curl et overhead EZ lundi et
+  // vendredi, fente mardi et jeudi) partage son historique : « dernière fois » = la dernière
+  // séance où il a été fait, quel que soit le jour. Avant (audit du 03/11/2026), le vendredi ne
+  // voyait que le vendredi et restait 4 kg sous le lundi.
   const PREVIOUS_WINDOW_DAYS = 120
   async function loadPreviousData(programDayId, targetDate = todayISO()) {
     const userStore = useUserStore()
     const since = new Date(targetDate)
     since.setDate(since.getDate() - PREVIOUS_WINDOW_DAYS)
 
+    const { data: dayExercises } = await supabase
+      .from('exercises')
+      .select('id, name, bar_id, program_days!inner(program_id)')
+      .eq('program_day_id', programDayId)
+    if (!dayExercises?.length) { previousSets.value = {}; return }
+
+    const lift = e => `${e.name}|${e.bar_id ?? ''}`
+    const todayIdByLift = Object.fromEntries(dayExercises.map(e => [lift(e), e.id]))
+    const { data: siblings } = await supabase
+      .from('exercises')
+      .select('id, name, bar_id, program_days!inner(program_id)')
+      .eq('program_days.program_id', dayExercises[0].program_days.program_id)
+      .in('name', [...new Set(dayExercises.map(e => e.name))])
+    const targetOf = Object.fromEntries(dayExercises.map(e => [e.id, e.id]))
+    for (const e of (siblings ?? [])) {
+      const t = todayIdByLift[lift(e)]
+      if (t) targetOf[e.id] = t
+    }
+
     const { data: logs } = await supabase
       .from('set_logs')
-      .select('exercise_id, set_number, weight_kg, reps_done, rir, exercises!inner(program_day_id), workout_sessions!inner(user_id, completed, session_date)')
-      .eq('exercises.program_day_id', programDayId)
+      .select('exercise_id, set_number, weight_kg, reps_done, rir, workout_sessions!inner(user_id, completed, session_date)')
+      .in('exercise_id', Object.keys(targetOf))
       .eq('workout_sessions.user_id', userStore.user.id)
       .eq('workout_sessions.completed', true)
       .lt('workout_sessions.session_date', targetDate)
       .gte('workout_sessions.session_date', since.toISOString().slice(0, 10))
 
-    const latestDate = {}
+    const latest = {} // exo du jour → { date, from } : la séance la plus récente, et l'exo qui l'a loguée
     for (const log of (logs ?? [])) {
+      const t = targetOf[log.exercise_id]
       const d = log.workout_sessions.session_date
-      if (!latestDate[log.exercise_id] || d > latestDate[log.exercise_id]) latestDate[log.exercise_id] = d
+      if (!latest[t] || d > latest[t].date) latest[t] = { date: d, from: log.exercise_id }
     }
     const map = {}
     for (const log of (logs ?? [])) {
-      if (log.workout_sessions.session_date !== latestDate[log.exercise_id]) continue
-      if (!map[log.exercise_id]) map[log.exercise_id] = {}
-      map[log.exercise_id][log.set_number] = {
+      const t = targetOf[log.exercise_id]
+      if (log.workout_sessions.session_date !== latest[t].date || log.exercise_id !== latest[t].from) continue
+      if (!map[t]) map[t] = {}
+      map[t][log.set_number] = {
         weight_kg: log.weight_kg,
         reps_done: log.reps_done,
         rir: log.rir,
@@ -369,8 +395,14 @@ export const useWorkoutStore = defineStore('workout', () => {
     return !!getSetLog(exerciseId, setNumber)
   }
 
+  // Série sans équivalent la dernière fois (4e série du lundi après un vendredi à 3) →
+  // la dernière série faite ce jour-là.
   function getPreviousSet(exerciseId, setNumber) {
-    return previousSets.value[exerciseId]?.[setNumber] ?? null
+    const sets = previousSets.value[exerciseId]
+    if (!sets) return null
+    if (sets[setNumber]) return sets[setNumber]
+    const last = Math.max(...Object.keys(sets).map(Number).filter(n => n < setNumber))
+    return Number.isFinite(last) ? sets[last] : null
   }
 
   // Aggregate stats for the current session — used by completion overlay & history detail.

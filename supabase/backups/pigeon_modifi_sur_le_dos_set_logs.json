@@ -1,0 +1,26 @@
+[
+  {
+    "id": "a34643dc-d7e4-4f16-9778-a4c1120249b3",
+    "session_id": "49c1e501-60a6-4f51-b6b4-5b23f602e45d",
+    "exercise_id": "e4c13c58-1f42-4a8f-a2ae-8a1629ca3483",
+    "set_number": 1,
+    "weight_kg": null,
+    "reps_done": 60,
+    "rir": null,
+    "logged_at": "2026-04-25T08:08:57.218Z",
+    "exercise_name": "Pigeon modifié (sur le dos)",
+    "session_date": "2026-04-24T22:00:00.000Z"
+  },
+  {
+    "id": "69a65a43-ce15-4742-af0e-360f1d2e0d38",
+    "session_id": "49c1e501-60a6-4f51-b6b4-5b23f602e45d",
+    "exercise_id": "e4c13c58-1f42-4a8f-a2ae-8a1629ca3483",
+    "set_number": 2,
+    "weight_kg": null,
+    "reps_done": 60,
+    "rir": null,
+    "logged_at": "2026-04-25T08:10:22.656Z",
+    "exercise_name": "Pigeon modifié (sur le dos)",
+    "session_date": "2026-04-24T22:00:00.000Z"
+  }
+]

@@ -1,0 +1,26 @@
+[
+  {
+    "id": "09e84d2d-ad4f-492a-8f42-c89b30da2b45",
+    "session_id": "49c1e501-60a6-4f51-b6b4-5b23f602e45d",
+    "exercise_id": "8682933e-ae91-4293-82fc-bd058b832589",
+    "set_number": 1,
+    "weight_kg": null,
+    "reps_done": null,
+    "rir": null,
+    "logged_at": "2026-04-25T08:03:57.976Z",
+    "exercise_name": "Open book",
+    "session_date": "2026-04-24T22:00:00.000Z"
+  },
+  {
+    "id": "ca58b905-118c-4edc-86b9-c0b78e222081",
+    "session_id": "49c1e501-60a6-4f51-b6b4-5b23f602e45d",
+    "exercise_id": "8682933e-ae91-4293-82fc-bd058b832589",
+    "set_number": 2,
+    "weight_kg": null,
+    "reps_done": null,
+    "rir": null,
+    "logged_at": "2026-04-25T08:06:12.390Z",
+    "exercise_name": "Open book",
+    "session_date": "2026-04-24T22:00:00.000Z"
+  }
+]
