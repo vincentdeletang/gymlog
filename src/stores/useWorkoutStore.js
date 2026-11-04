@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { supabase } from '@/lib/supabase'
-import { queueSetLog, syncPendingLogs, pushSetLog, getPendingLogs, removePendingLog } from '@/lib/offlineQueue'
+import { queueSetLog, syncPendingLogs, pushSetLog, getPendingLogs, removePendingLog, saveDurably } from '@/lib/offlineQueue'
 import { useUserStore } from './useUserStore'
 import { todayISO } from '@/lib/formatDate'
 
@@ -60,8 +60,8 @@ export const useWorkoutStore = defineStore('workout', () => {
 
     await syncPendingLogs()
     await loadSetLogs()
-    await mergePendingIntoMemory()
     await loadCardioLogs()
+    await mergePendingIntoMemory()
     await loadPreviousData(programDayId, targetDate)
     await loadPreviousCardioLogs(programDayId, targetDate)
     await loadPriorBestE1RM(targetDate)
@@ -191,18 +191,7 @@ export const useWorkoutStore = defineStore('workout', () => {
       cardioLogs.value.push(payload)
     }
 
-    const controller = new AbortController()
-    setTimeout(() => controller.abort(), 8000)
-    const op = existing
-      ? supabase.from('cardio_block_logs').update({
-          duration_seconds: payload.duration_seconds,
-          avg_hr: payload.avg_hr,
-          notes: payload.notes,
-        }).eq('id', payload.id).abortSignal(controller.signal)
-      : supabase.from('cardio_block_logs').insert(payload).abortSignal(controller.signal)
-
-    op.then(({ error }) => { if (error) console.warn('cardio sync failed', error) })
-      .catch(() => {})
+    saveDurably('cardio_block_logs', payload).catch(() => {})
   }
 
   function unmarkCardioDone(blockId) {
@@ -210,6 +199,7 @@ export const useWorkoutStore = defineStore('workout', () => {
     const log = cardioLogs.value.find(l => l.cardio_block_id === blockId)
     if (!log) return
     cardioLogs.value = cardioLogs.value.filter(l => l.cardio_block_id !== blockId)
+    removePendingLog(log.id).catch(() => {})
 
     const controller = new AbortController()
     setTimeout(() => controller.abort(), 8000)
@@ -231,8 +221,18 @@ export const useWorkoutStore = defineStore('workout', () => {
     if (!currentSession.value) return
     const pending = await getPendingLogs()
     for (const p of pending) {
-      if (p.session_id !== currentSession.value.id) continue
-      const { _pending, ...data } = p
+      const { _pending, _table = 'set_logs', ...data } = p
+      if (_table === 'workout_sessions') {
+        if (data.id === currentSession.value.id) currentSession.value = { ...currentSession.value, ...data }
+        continue
+      }
+      if (data.session_id !== currentSession.value.id) continue
+      if (_table === 'cardio_block_logs') {
+        const i = cardioLogs.value.findIndex(l => l.cardio_block_id === data.cardio_block_id)
+        if (i >= 0) cardioLogs.value.splice(i, 1, data)
+        else cardioLogs.value.push(data)
+        continue
+      }
       const idx = setLogs.value.findIndex(
         l => l.exercise_id === data.exercise_id && l.set_number === data.set_number
       )
@@ -366,20 +366,15 @@ export const useWorkoutStore = defineStore('workout', () => {
     const completedAt = new Date().toISOString()
     const isCatchUp = sessionDate !== todayISO()
 
-    // Optimistic local update — show celebration immediately
+    // Rien n'attend le réseau avant l'écran de fin : la clôture passe par la file durable
+    // (rejouée au retour en ligne et au rechargement), la série se calcule en local.
     currentSession.value = { ...currentSession.value, completed: true, completed_at: completedAt }
-    if (!isCatchUp) {
-      await userStore.updateStreak(sessionDate)
+    if (!isCatchUp) userStore.updateStreak(sessionDate)
+    try {
+      await saveDurably('workout_sessions', currentSession.value)
+    } catch (e) {
+      console.error('Session queue failed', e)
     }
-
-    // Sync to Supabase in background
-    supabase
-      .from('workout_sessions')
-      .update({ completed: true, completed_at: completedAt })
-      .eq('id', currentSession.value.id)
-      .then(({ error }) => {
-        if (error) console.error('Session sync failed, will retry on next load', error)
-      })
 
     syncPendingLogs()
     return true

@@ -74,13 +74,23 @@ function withTimeout(promise, ms, controller) {
   })
 }
 
+// _table absent = set_logs (entrées d'avant le 04/11/2026).
 export async function pushSetLog(payload) {
-  const { _pending, ...data } = payload
+  const { _pending, _table = 'set_logs', ...data } = payload
   const controller = new AbortController()
-  const req = supabase.from('set_logs').upsert(data).abortSignal(controller.signal)
+  const req = supabase.from(_table).upsert(data).abortSignal(controller.signal)
   const { error } = await withTimeout(req, NET_TIMEOUT_MS, controller)
   if (error) throw error
   await removePendingLog(data.id)
+}
+
+// Même file durable que les séries, pour le cardio et la clôture de séance. Avant (04/11/2026),
+// ces deux écritures partaient en direct sans reprise : un réseau qui flanche en fin de zone 2
+// et la séance restait ouverte, cardio perdu, alors que l'écran les affichait faits.
+export async function saveDurably(table, row) {
+  const entry = { ...row, _table: table }
+  await queueSetLog(entry)
+  pushSetLog(entry).catch(() => { /* stays queued, retried on resume/online */ })
 }
 
 let syncing = false

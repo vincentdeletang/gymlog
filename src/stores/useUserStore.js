@@ -81,8 +81,12 @@ export const useUserStore = defineStore('user', () => {
 
     const best = Math.max(streak, userState.value.streak_best ?? 0)
     const updates = { streak_current: streak, streak_best: best, last_session_date: today }
-    await supabase.from('user_state').update(updates).eq('user_id', user.value.id)
     userState.value = { ...userState.value, ...updates }
+    const controller = new AbortController()
+    setTimeout(() => controller.abort(), 8000)
+    supabase.from('user_state').update(updates).eq('user_id', user.value.id).abortSignal(controller.signal)
+      .then(({ error }) => { if (error) console.warn('streak sync failed', error) })
+      .catch(() => {})
     return streak
   }
 
