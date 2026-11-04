@@ -3,7 +3,6 @@ import { ref, computed, onMounted } from 'vue'
 import WeekCalendar from '@/components/stats/WeekCalendar.vue'
 import StatCard from '@/components/stats/StatCard.vue'
 import ProgressChart from '@/components/stats/ProgressChart.vue'
-import BodyweightCard from '@/components/stats/BodyweightCard.vue'
 import WeeklyVolumeByMuscle from '@/components/stats/WeeklyVolumeByMuscle.vue'
 import DeloadAlert from '@/components/stats/DeloadAlert.vue'
 import PRList from '@/components/stats/PRList.vue'
@@ -174,11 +173,6 @@ function getWeekNumber(d) {
     <div class="section-block">
       <div class="block-title">Cette semaine</div>
       <WeekCalendar :sessions="recentSessions" />
-    </div>
-
-    <!-- Bodyweight tracking -->
-    <div class="section-block">
-      <BodyweightCard />
     </div>
 
     <!-- Global stats -->
