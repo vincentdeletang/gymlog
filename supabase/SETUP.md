@@ -2162,3 +2162,9 @@ Fichier complet : `supabase/migrations/059_rowing_landmine_test_mercredi.sql`.
 > Mardi et jeudi deviennent des jours cardio : 20 min de nage (la zone 2 du jour) puis 2 × 15 min de sauna. Les face pulls passent au mercredi ; bird dog, fente et SLDL au vendredi (jambes une fois par semaine). Sortent : pompes serrées, plank, rowing élastique, 2e fente du mardi (set_logs sauvegardés dans `supabase/backups/`).
 
 Fichier complet : `supabase/migrations/083_mardi_jeudi_piscine_sauna.sql`.
+
+## 86. Migration 084 — Pompes serrées de retour (vendredi), fente au mercredi
+
+> La 083 avait sorti la seule dose de pecs : les pompes serrées reviennent le vendredi, même id, set_logs restaurés. La fente passe au mercredi : jambes deux fois par semaine (fente mer, SLDL ven), mercredi 11 séries, vendredi 12.
+
+Fichier complet : `supabase/migrations/084_pompes_retour_fente_mercredi.sql`.
