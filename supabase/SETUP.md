@@ -2156,3 +2156,9 @@ Fichier complet : `supabase/migrations/058_side_plank_mercredi.sql`.
 > 6e variante de tirage, la seule qui contourne les trois obstacles des cinq précédentes : la barre passe entre les jambes (pas le ventre), pas de banc (pas l'entrejambe), rien d'accroché au rack. Un bout de la barre droite calé dans un coin, l'autre chargé et posé sur une barre de sécurité entre les séries (pas de ramassage au sol). 3 × 10-12, départ 10 kg de disques, `bar_id` NULL (on ne soulève qu'une partie de la barre). **Test** : ventre, dos ou avant-bras qui disent non à la 1ère série → DROP, dossier tirage clos. Inséré en position 1 du mercredi, barre au front et curl assis décalés.
 
 Fichier complet : `supabase/migrations/059_rowing_landmine_test_mercredi.sql`.
+
+## 85. Migration 083 — Mardi et jeudi : piscine + sauna, muscu sur 3 jours
+
+> Mardi et jeudi deviennent des jours cardio : 20 min de nage (la zone 2 du jour) puis 2 × 15 min de sauna. Les face pulls passent au mercredi ; bird dog, fente et SLDL au vendredi (jambes une fois par semaine). Sortent : pompes serrées, plank, rowing élastique, 2e fente du mardi (set_logs sauvegardés dans `supabase/backups/`).
+
+Fichier complet : `supabase/migrations/083_mardi_jeudi_piscine_sauna.sql`.
