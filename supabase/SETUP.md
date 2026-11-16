@@ -2168,3 +2168,15 @@ Fichier complet : `supabase/migrations/083_mardi_jeudi_piscine_sauna.sql`.
 > La 083 avait sorti la seule dose de pecs : les pompes serrées reviennent le vendredi, même id, set_logs restaurés. La fente passe au mercredi : jambes deux fois par semaine (fente mer, SLDL ven), mercredi 11 séries, vendredi 12.
 
 Fichier complet : `supabase/migrations/084_pompes_retour_fente_mercredi.sql`.
+
+## 87. Migration 085 — Curl EZ : prise large et règle de douleur (avant-bras)
+
+> 16/11 : douleur aux 2 avant-bras depuis 30 kg, côté extérieur vers le poignet, pire après avoir posé la barre. Carrure large, prise étroite de l'EZ = poignet tordu sous charge. Prise sur les coudes extérieurs ; au-delà de 3/10 pendant, ou encore là le lendemain matin → curl haltère à la place.
+
+Fichier complet : `supabase/migrations/085_curl_ez_prise_large.sql`.
+
+## 88. Migration 086 — Curl EZ remplacé par le curl haltère debout (lundi, vendredi)
+
+> Même soir que la 085 : la prise large revient à une barre droite, même souci ; le curl haltère du mercredi ne fait pas mal. Curl haltère debout, bras par bras, en alterné avec l'overhead EZ. Logs EZ dans `supabase/backups/curl_barre_ez_supination_set_logs.json`.
+
+Fichier complet : `supabase/migrations/086_curl_ez_remplace_par_curl_haltere.sql`.
