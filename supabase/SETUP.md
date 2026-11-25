@@ -2186,3 +2186,9 @@ Fichier complet : `supabase/migrations/086_curl_ez_remplace_par_curl_haltere.sql
 > Le bassin est ouvert 10h-19h le mercredi en période scolaire (12h-14h seulement mardi et jeudi), et la nage du mardi/jeudi n'était plus loguée depuis le 12/11. Mardi et jeudi : 20 min de tapis le matin, pas de coupure à midi. Mercredi : bras B le matin, nage + sauna à midi (bien-être fermé 13h-15h). Samedi : nage + sauna. 6 zone 2, 2 saunas. Les blocs déménagent avec leur historique, seul le tapis du mardi est neuf.
 
 Fichier complet : `supabase/migrations/087_piscine_mercredi_samedi.sql`.
+
+## 90. Migration 088 — Sauna 4 jours à 11h, tapis 40 min mardi et jeudi, samedi rendu au repos
+
+> Le samedi ne tient pas (week-ends pleins). Sauna à 11h, son heure calme au boulot : mardi et jeudi seul après 40 min de tapis le matin, mercredi après 20 min de nage, vendredi seul après la séance du matin. 4 saunas (KIHD, meilleur groupe 4-7/sem). Le sauna vit dans les notes du jour, pas dans un bloc cardio. Les 3 logs de nage du bloc du samedi rejoignent celui du mercredi.
+
+Fichier complet : `supabase/migrations/088_sauna_4_jours_tapis_40.sql`.
