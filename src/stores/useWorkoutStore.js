@@ -631,6 +631,40 @@ export const useWorkoutStore = defineStore('workout', () => {
     return dates
   }
 
+  // Logs bruts de [from, to] pour le compteur de la semaine (onglet Programme).
+  // La séance en mémoire est fusionnée : ses logs encore dans la file hors ligne comptent.
+  async function fetchWeekLogs(from, to) {
+    const userStore = useUserStore()
+    const [setRes, cardioRes] = await Promise.all([
+      supabase
+        .from('set_logs')
+        .select('id, exercise_id, workout_sessions!inner(user_id, session_date)')
+        .eq('workout_sessions.user_id', userStore.user.id)
+        .gte('workout_sessions.session_date', from)
+        .lte('workout_sessions.session_date', to),
+      supabase
+        .from('cardio_block_logs')
+        .select('id, duration_seconds, workout_sessions!inner(user_id, session_date)')
+        .eq('workout_sessions.user_id', userStore.user.id)
+        .gte('workout_sessions.session_date', from)
+        .lte('workout_sessions.session_date', to),
+    ])
+    const sets = new Map()
+    const cardio = new Map()
+    for (const r of (setRes.data ?? [])) {
+      sets.set(r.id, { exercise_id: r.exercise_id, date: r.workout_sessions?.session_date })
+    }
+    for (const r of (cardioRes.data ?? [])) {
+      cardio.set(r.id, { duration_seconds: r.duration_seconds ?? 0, date: r.workout_sessions?.session_date })
+    }
+    const live = currentSession.value
+    if (live && live.session_date >= from && live.session_date <= to) {
+      for (const l of setLogs.value) sets.set(l.id, { exercise_id: l.exercise_id, date: live.session_date })
+      for (const l of cardioLogs.value) cardio.set(l.id, { duration_seconds: l.duration_seconds ?? 0, date: live.session_date })
+    }
+    return { sets: [...sets.values()], cardio: [...cardio.values()] }
+  }
+
   async function fetchWeeklyVolume(weeks = 8) {
     const userStore = useUserStore()
     const since = new Date()
@@ -727,7 +761,7 @@ export const useWorkoutStore = defineStore('workout', () => {
     getPreviousCardioLogs,
     checkAndRecordPR, epleyE1RM, computeSessionStats, updateSessionNotes,
     fetchHistory, fetchSessionDetail, fetchSessionCardio,
-    fetchWeightProgress, fetchWeeklyVolume, fetchRIRStats, fetchActiveDates,
+    fetchWeightProgress, fetchWeeklyVolume, fetchRIRStats, fetchActiveDates, fetchWeekLogs,
     fetchCurrentWeekVolumeByMuscle, fetchDeloadCandidates, fetchAllTimePRs,
   }
 })

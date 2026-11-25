@@ -196,6 +196,11 @@ async function openSetModal({ exercise, setNumber }) {
     } else {
       await workoutStore.logSet({ exerciseId: exercise.id, setNumber, weightKg: null, repsDone: null, rir: null })
       playSuccess()
+      if (exercise.section === 'cooldown' && cooldownDone.value && zone2Done.value && canFinish.value && !inCatchUpMode.value) {
+        dismissRestTimer()
+        finishSession()
+        return
+      }
       afterFreshLog(exercise, setNumber)
     }
     return
@@ -313,9 +318,16 @@ async function finishSession() {
   }
 }
 
-// La zone 2 chronométrée qui va au bout clôt la séance.
+// La séance se clôt seule quand la zone 2 est faite et que tout le cooldown est coché
+// (tapis à 8h, sauna à 11h : la zone 2 seule ne clôt plus tant qu'il reste le sauna).
+const zone2Done = computed(() =>
+  cardioBlocks.value.length > 0 && cardioBlocks.value.every(b => workoutStore.isCardioDone(b.id))
+)
+
 function onZone2Done() {
-  if (canFinish.value && !inCatchUpMode.value) finishSession()
+  if (!canFinish.value || inCatchUpMode.value) return
+  if (cooldownExercises.value.length && !cooldownDone.value) return
+  finishSession()
 }
 
 // Écran allumé du chargement de la séance jusqu'à sa clôture.
@@ -523,6 +535,25 @@ watch(mobilityDone, done => { if (done) open.value.mobility = false })
             <BoxingTimer v-if="block.name === 'Sac de boxe'" :block="block" :index="i" @done="workoutStore.markCardioDone(block.id)" />
             <CardioBlock v-else :block="block" :index="i" @timer-done="onZone2Done" />
           </template>
+        </div>
+      </div>
+
+      <div v-if="cooldownExercises.length" class="section">
+        <button class="section-header" @click="toggle('cooldown')">
+          <div class="section-left">
+            <span class="section-label cooldown">🧘 RÉCUP</span>
+            <span class="section-sub">Après séance</span>
+            <span v-if="cooldownDone" class="section-check">✓</span>
+          </div>
+          <span class="section-chevron" :class="{ open: open.cooldown }">›</span>
+        </button>
+        <div v-show="open.cooldown" class="section-body">
+          <ExerciseRow
+            v-for="ex in cooldownExercises"
+            :key="ex.id"
+            :exercise="ex"
+            @openSet="openSetModal"
+          />
         </div>
       </div>
     </div>

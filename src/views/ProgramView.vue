@@ -1,13 +1,72 @@
 <script setup>
 import { ref, computed, watch, onMounted } from 'vue'
 import { useProgramStore } from '@/stores/useProgramStore'
+import { useWorkoutStore } from '@/stores/useWorkoutStore'
 import ExerciseNotes from '@/components/shared/ExerciseNotes.vue'
 
 const programStore = useProgramStore()
+const workoutStore = useWorkoutStore()
+
+const SAUNA_NAME = 'Sauna (2 × 15 min)'
+
+// Semaine en cours, lundi → dimanche, à l'heure de Paris.
+function parisWeek() {
+  const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Paris' }).format(new Date())
+  const d = new Date(today + 'T00:00:00Z')
+  const monday = new Date(d)
+  monday.setUTCDate(d.getUTCDate() - ((d.getUTCDay() + 6) % 7))
+  const dates = {}
+  for (let i = 0; i < 7; i++) {
+    const day = new Date(monday)
+    day.setUTCDate(monday.getUTCDate() + i)
+    dates[day.getUTCDay()] = day.toISOString().slice(0, 10)
+  }
+  return { from: dates[1], to: dates[0], dates }
+}
+
+const week = ref(parisWeek())
+const weekLogs = ref(null)
+
+async function loadWeek() {
+  week.value = parisWeek()
+  weekLogs.value = await workoutStore.fetchWeekLogs(week.value.from, week.value.to)
+}
 
 onMounted(() => {
   if (!programStore.activeProgram) programStore.fetchActiveProgram()
+  loadWeek()
 })
+
+const activeDates = computed(() => {
+  const logs = weekLogs.value
+  if (!logs) return new Set()
+  return new Set([...logs.sets, ...logs.cardio].map(l => l.date).filter(Boolean))
+})
+
+const trainingDows = computed(() =>
+  new Set(programStore.programDays.filter(d => d.type !== 'rest').map(d => d.day_of_week))
+)
+
+const saunaIds = computed(() =>
+  new Set(programStore.exercises.filter(e => e.name === SAUNA_NAME).map(e => e.id))
+)
+
+const weekProgress = computed(() => {
+  const logs = weekLogs.value
+  const sessionsDone = Object.entries(week.value.dates)
+    .filter(([dow, date]) => trainingDows.value.has(Number(dow)) && activeDates.value.has(date)).length
+  const saunaDone = logs ? logs.sets.filter(l => saunaIds.value.has(l.exercise_id)).length : 0
+  const zone2Sec = logs ? logs.cardio.reduce((s, l) => s + (l.duration_seconds ?? 0), 0) : 0
+  return {
+    sessions: { done: sessionsDone, target: trainingDows.value.size },
+    sauna:    { done: saunaDone, target: saunaIds.value.size },
+    zone2:    { done: Math.round(zone2Sec / 60), target: weeklyStats.value.totalCardioMin },
+  }
+})
+
+function isDayDone(day) {
+  return activeDates.value.has(week.value.dates[day.day_of_week])
+}
 
 const DAYS_SHORT = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam']
 const DAYS_FULL  = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi']
@@ -52,8 +111,6 @@ const sections = computed(() => {
 })
 
 const weeklyStats = computed(() => ({
-  trainingDays:  programStore.programDays.filter(d => d.type !== 'rest').length,
-  totalSets:     programStore.exercises.reduce((s, e) => s + e.sets_target, 0),
   totalCardioMin: programStore.cardioBlocks.reduce((s, b) => s + b.duration_minutes, 0),
 }))
 
@@ -88,21 +145,28 @@ const TYPE_ICON  = { strength: '💪', cardio: '🏃', rest: '😴' }
 
     <template v-else-if="programStore.activeProgram">
 
-      <!-- Weekly stats -->
+      <!-- Cette semaine -->
+      <div class="week-title">Cette semaine</div>
       <div class="stats-row">
         <div class="stat">
-          <span class="stat-val">{{ weeklyStats.trainingDays }}</span>
-          <span class="stat-lbl">jours</span>
+          <span class="stat-val" :class="{ 'stat-full': weekProgress.sessions.done >= weekProgress.sessions.target }">
+            {{ weekProgress.sessions.done }}<span class="stat-target">/{{ weekProgress.sessions.target }}</span>
+          </span>
+          <span class="stat-lbl">séances</span>
         </div>
         <div class="stat-div" />
         <div class="stat">
-          <span class="stat-val">{{ weeklyStats.totalSets }}</span>
-          <span class="stat-lbl">séries</span>
+          <span class="stat-val" :class="{ 'stat-full': weekProgress.sauna.target && weekProgress.sauna.done >= weekProgress.sauna.target }">
+            {{ weekProgress.sauna.done }}<span class="stat-target">/{{ weekProgress.sauna.target }}</span>
+          </span>
+          <span class="stat-lbl">sauna</span>
         </div>
         <div class="stat-div" />
         <div class="stat">
-          <span class="stat-val">{{ weeklyStats.totalCardioMin }}</span>
-          <span class="stat-lbl">min cardio</span>
+          <span class="stat-val" :class="{ 'stat-full': weekProgress.zone2.done >= weekProgress.zone2.target }">
+            {{ weekProgress.zone2.done }}<span class="stat-target">/{{ weekProgress.zone2.target }}</span>
+          </span>
+          <span class="stat-lbl">min zone 2</span>
         </div>
       </div>
 
@@ -119,6 +183,7 @@ const TYPE_ICON  = { strength: '💪', cardio: '🏃', rest: '😴' }
           }"
           @click="selectedDayId = day.id"
         >
+          <span v-if="isDayDone(day)" class="pill-check">✓</span>
           <span class="pill-abbr">{{ DAYS_SHORT[day.day_of_week] }}</span>
           <span class="pill-icon">{{ TYPE_ICON[day.type] }}</span>
           <div class="pill-vol">
@@ -278,6 +343,24 @@ const TYPE_ICON  = { strength: '💪', cardio: '🏃', rest: '😴' }
   line-height: 1;
 }
 
+.stat-target {
+  font-size: 15px;
+  font-weight: 700;
+  color: #6b7280;
+}
+
+.stat-full { color: #10b981; }
+
+.week-title {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: #9ca3af;
+  margin: 0 16px 6px;
+}
+
 .stat-lbl {
   font-size: 10px;
   color: #6b7280;
@@ -338,6 +421,16 @@ const TYPE_ICON  = { strength: '💪', cardio: '🏃', rest: '😴' }
 
 .pill-selected .pill-abbr { color: #f9fafb; }
 .pill-today    .pill-abbr { color: #f59e0b; }
+
+.pill-check {
+  position: absolute;
+  top: 2px;
+  right: 4px;
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1;
+  color: #10b981;
+}
 
 .pill-icon {
   font-size: 16px;
