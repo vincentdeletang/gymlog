@@ -2192,3 +2192,9 @@ Fichier complet : `supabase/migrations/087_piscine_mercredi_samedi.sql`.
 > Le samedi ne tient pas (week-ends pleins). Sauna à 11h, son heure calme au boulot : mardi et jeudi seul après 40 min de tapis le matin, mercredi après 20 min de nage, vendredi seul après la séance du matin. 4 saunas (KIHD, meilleur groupe 4-7/sem). Le sauna vit dans les notes du jour, pas dans un bloc cardio. Les 3 logs de nage du bloc du samedi rejoignent celui du mercredi.
 
 Fichier complet : `supabase/migrations/088_sauna_4_jours_tapis_40.sql`.
+
+## 91. Migration 089 — Le sauna devient une case à cocher (mardi à vendredi)
+
+> Une ligne « Sauna (2 × 15 min) » en section cooldown sur les jours 2 à 5, pour que le compteur de la semaine (appli et tableau de bord FDR) ait de quoi compter. Le nom exact sert de clé.
+
+Fichier complet : `supabase/migrations/089_sauna_a_cocher.sql`.
