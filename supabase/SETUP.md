@@ -2180,3 +2180,9 @@ Fichier complet : `supabase/migrations/085_curl_ez_prise_large.sql`.
 > Même soir que la 085 : la prise large revient à une barre droite, même souci ; le curl haltère du mercredi ne fait pas mal. Curl haltère debout, bras par bras, en alterné avec l'overhead EZ. Logs EZ dans `supabase/backups/curl_barre_ez_supination_set_logs.json`.
 
 Fichier complet : `supabase/migrations/086_curl_ez_remplace_par_curl_haltere.sql`.
+
+## 89. Migration 087 — Piscine + sauna le mercredi et le samedi, tapis le mardi et le jeudi
+
+> Le bassin est ouvert 10h-19h le mercredi en période scolaire (12h-14h seulement mardi et jeudi), et la nage du mardi/jeudi n'était plus loguée depuis le 12/11. Mardi et jeudi : 20 min de tapis le matin, pas de coupure à midi. Mercredi : bras B le matin, nage + sauna à midi (bien-être fermé 13h-15h). Samedi : nage + sauna. 6 zone 2, 2 saunas. Les blocs déménagent avec leur historique, seul le tapis du mardi est neuf.
+
+Fichier complet : `supabase/migrations/087_piscine_mercredi_samedi.sql`.
